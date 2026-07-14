@@ -220,13 +220,15 @@ function Modal({ title, onClose, children, width = 420 }) {
 }
 
 // ---------- Modals ----------
-function AddItemModal({ onClose, onSave }) {
+function AddItemModal({ onClose, onSave, existingItems = [] }) {
   const COLORS = useColors();
   const inputStyle = useInputStyle();
   const [type, setType] = useState('card');
   const [language, setLanguage] = useState('');
   const [game, setGame] = useState('PKM');
   const [name, setName] = useState('');
+  const [nameQuery, setNameQuery] = useState('');
+  const [showNameSuggestions, setShowNameSuggestions] = useState(false);
   const [set, setSet] = useState('');
   const [number, setNumber] = useState('');
   const [variant, setVariant] = useState('');
@@ -241,6 +243,43 @@ function AddItemModal({ onClose, onSave }) {
   const [schedule, setSchedule] = useState([]);
   const [scheduleDays, setScheduleDays] = useState('');
   const [schedulePercent, setSchedulePercent] = useState('');
+  const [barcodeInput, setBarcodeInput] = useState('');
+  const [barcodeError, setBarcodeError] = useState('');
+
+  // Name suggestions from existing items
+  const uniqueNames = [...new Set(existingItems.map(i => i.name))].filter(n => n && n.toLowerCase().includes(nameQuery.toLowerCase()));
+  
+  const handleSelectName = (selectedName) => {
+    setName(selectedName);
+    setNameQuery('');
+    setShowNameSuggestions(false);
+  };
+
+  const handleBarcodeScanned = (barcode) => {
+    const foundItem = existingItems.find(i => i.sku.toLowerCase() === barcode.toLowerCase());
+    if (foundItem) {
+      // Pre-fill form with existing item data
+      setType(foundItem.type);
+      setLanguage(foundItem.language);
+      setGame(foundItem.game);
+      setName(foundItem.name);
+      setNameQuery('');
+      setSet(foundItem.set);
+      setNumber(foundItem.number);
+      setVariant(foundItem.variant);
+      setVariantQuery(foundItem.variant);
+      setCondition(foundItem.condition || 'NM');
+      setCost(foundItem.cost.toString());
+      setPrice(foundItem.price.toString());
+      setQty('1'); // Default to adding 1 unit
+      setBarcodeInput('');
+      setBarcodeError('');
+      alert(`Found: ${foundItem.name}\nAdjust quantity and save to add more units.`);
+    } else {
+      setBarcodeError(`Barcode not found: ${barcode}. Add as new item.`);
+      setTimeout(() => setBarcodeError(''), 3000);
+    }
+  };
 
   const addScheduleRow = () => {
     const d = parseInt(scheduleDays, 10), p = parseFloat(schedulePercent);
@@ -271,27 +310,90 @@ function AddItemModal({ onClose, onSave }) {
           <button key={t} onClick={() => setType(t)} style={{ flex: 1, padding: '8px', borderRadius: 8, border: `1px solid ${type === t ? COLORS.brass : COLORS.brown}`, background: type === t ? COLORS.brass : 'transparent', color: type === t ? COLORS.espresso : COLORS.cream, fontFamily: 'Jost, sans-serif', fontWeight: 600, fontSize: 13, cursor: 'pointer', textTransform: 'capitalize' }}>{t}</button>
         ))}
       </div>
-      <Field label="Name"><input style={inputStyle} value={name} onChange={e => setName(e.target.value)} placeholder={type === 'card' ? 'Charizard ex' : 'Ultra Pro Sleeves'} autoFocus /></Field>
+
+      {/* Barcode lookup section */}
+      <Field label="Scan existing item (optional)">
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input style={inputStyle} type="text" placeholder="Barcode..." value={barcodeInput} onChange={e => setBarcodeInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && barcodeInput && handleBarcodeScanned(barcodeInput)} />
+          <Button onClick={() => barcodeInput && handleBarcodeScanned(barcodeInput)} style={{ padding: '8px 12px', fontSize: 12 }}>Lookup</Button>
+        </div>
+        {barcodeError && <div style={{ color: COLORS.oxblood, fontFamily: 'Jost, sans-serif', fontSize: 11, marginTop: 6 }}>{barcodeError}</div>}
+      </Field>
+
+      {/* Character/Name field with autocomplete */}
+      <Field label="Name">
+        <div style={{ position: 'relative' }}>
+          <input 
+            style={inputStyle} 
+            value={name} 
+            onChange={e => { setName(e.target.value); setNameQuery(e.target.value); setShowNameSuggestions(!!e.target.value); }}
+            onFocus={() => setShowNameSuggestions(!!nameQuery)}
+            onBlur={() => setTimeout(() => setShowNameSuggestions(false), 200)}
+            placeholder={type === 'card' ? 'Charizard ex' : 'Ultra Pro Sleeves'} 
+            autoFocus 
+          />
+          {showNameSuggestions && uniqueNames.length > 0 && (
+            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: COLORS.espressoSoft, border: `1px solid ${COLORS.brown}`, borderTop: 'none', borderRadius: '0 0 8px 8px', zIndex: 1000, maxHeight: 150, overflowY: 'auto' }}>
+              {uniqueNames.slice(0, 5).map(n => (
+                <div key={n} onClick={() => handleSelectName(n)} style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: `1px solid ${COLORS.brown}`, color: COLORS.cream, fontSize: 12, fontFamily: 'Jost, sans-serif' }}>
+                  {n}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </Field>
+
       {type === 'card' && (
         <>
           <Field label="Game"><input style={inputStyle} value={game} onChange={e => setGame(e.target.value)} placeholder="PKM / MTG / YGO" /></Field>
           <Field label="Language"><select style={inputStyle} value={language} onChange={e => setLanguage(e.target.value)}>{LANGUAGES.map(l => <option key={l.code} value={l.code}>{l.label}</option>)}</select></Field>
           <Field label="Set"><input style={inputStyle} value={set} onChange={e => setSet(e.target.value)} placeholder="OBF" /></Field>
           <Field label="Card #"><input style={inputStyle} value={number} onChange={e => setNumber(e.target.value)} placeholder="054" /></Field>
+          
+          {/* Variant field with both search and dropdown */}
           <Field label="Variant / rarity">
             <div style={{ position: 'relative' }}>
-              <input style={inputStyle} type="text" placeholder="Search variants or type custom..." value={variantQuery} onChange={e => { setVariantQuery(e.target.value); setShowVariantDropdown(true); }} onFocus={() => setShowVariantDropdown(true)} onBlur={() => setTimeout(() => setShowVariantDropdown(false), 200)} />
-              {showVariantDropdown && variantQuery && (
-                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: COLORS.espressoSoft, border: `1px solid ${COLORS.brown}`, borderTop: 'none', borderRadius: '0 0 8px 8px', zIndex: 1000, maxHeight: 200, overflowY: 'auto' }}>
-                  {filteredVariants.length > 0 ? filteredVariants.map(v => (
-                    <div key={v.code} onClick={() => { setVariant(v.code); setVariantQuery(v.label); setShowVariantDropdown(false); }} style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: `1px solid ${COLORS.brown}`, color: COLORS.cream, fontSize: 13, fontFamily: 'Jost, sans-serif' }}>
-                      <span style={{ fontWeight: 600, color: COLORS.brass }}>{v.code}</span> — {v.label}
-                    </div>
-                  )) : <div style={{ padding: '8px 12px', color: COLORS.creamDim, fontFamily: 'Jost, sans-serif', fontSize: 12 }}>No matches. Type to create custom variant.</div>}
+              <input 
+                style={inputStyle} 
+                type="text" 
+                placeholder="Search or select variant..." 
+                value={variantQuery} 
+                onChange={e => { setVariantQuery(e.target.value); setShowVariantDropdown(true); }}
+                onFocus={() => setShowVariantDropdown(true)}
+                onBlur={() => setTimeout(() => setShowVariantDropdown(false), 200)}
+              />
+              {showVariantDropdown && (
+                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: COLORS.espressoSoft, border: `1px solid ${COLORS.brown}`, borderTop: 'none', borderRadius: '0 0 8px 8px', zIndex: 1000, maxHeight: 250, overflowY: 'auto' }}>
+                  {filteredVariants.length > 0 ? (
+                    <>
+                      {variantQuery && <div style={{ padding: '8px 12px', fontFamily: 'Jost, sans-serif', fontSize: 10, color: COLORS.creamDim, fontWeight: 600, textTransform: 'uppercase' }}>Matching:</div>}
+                      {filteredVariants.map(v => (
+                        <div key={v.code} onClick={() => { setVariant(v.code); setVariantQuery(v.label); setShowVariantDropdown(false); }} style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: `1px solid ${COLORS.brown}`, color: COLORS.cream, fontSize: 13, fontFamily: 'Jost, sans-serif', background: variant === v.code ? COLORS.brown : 'transparent' }}>
+                          <span style={{ fontWeight: 600, color: COLORS.brass }}>{v.code}</span> — {v.label}
+                        </div>
+                      ))}
+                    </>
+                  ) : variantQuery ? (
+                    <div style={{ padding: '8px 12px', color: COLORS.creamDim, fontFamily: 'Jost, sans-serif', fontSize: 12 }}>No matches. Type custom variant or select from all below.</div>
+                  ) : null}
+                  
+                  {/* Show all variants if no search term or when dropdown is open */}
+                  {!variantQuery && (
+                    <>
+                      <div style={{ padding: '8px 12px', fontFamily: 'Jost, sans-serif', fontSize: 10, color: COLORS.creamDim, fontWeight: 600, textTransform: 'uppercase', background: COLORS.paper }}>All variants:</div>
+                      {VARIANTS.map(v => (
+                        <div key={v.code} onClick={() => { setVariant(v.code); setVariantQuery(v.label); setShowVariantDropdown(false); }} style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: `1px solid ${COLORS.brown}`, color: COLORS.cream, fontSize: 12, fontFamily: 'Jost, sans-serif', background: variant === v.code ? COLORS.brown : 'transparent' }}>
+                          <span style={{ fontWeight: 600, color: COLORS.brass }}>{v.code}</span> — {v.label}
+                        </div>
+                      ))}
+                    </>
+                  )}
                 </div>
               )}
             </div>
           </Field>
+
           <Field label="Condition"><select style={inputStyle} value={condition} onChange={e => setCondition(e.target.value)}>{CONDITIONS.map(c => <option key={c} value={c}>{c} — {CONDITION_LABELS[c]}</option>)}</select></Field>
         </>
       )}
@@ -485,7 +587,7 @@ function InventoryView({ items, onAdd, onDelete }) {
           ))}
         </div>
       )}
-      {showAdd && <AddItemModal onClose={() => setShowAdd(false)} onSave={(item) => { onAdd(item); setShowAdd(false); }} />}
+      {showAdd && <AddItemModal existingItems={items} onClose={() => setShowAdd(false)} onSave={(item) => { onAdd(item); setShowAdd(false); }} />}
     </div>
   );
 }
