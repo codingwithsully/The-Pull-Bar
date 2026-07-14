@@ -849,8 +849,8 @@ function POSView({ items, customers, coupons, platforms, onCheckout, onAddCustom
     // Initialize fees for the current channel (In-Store by default)
     const defaultPlatform = platforms.find(p => p.id === 'instore');
     if (defaultPlatform) {
-      setPlatformFees(String(defaultPlatform.platformFee || 0));
-      setPromotionCosts(String(defaultPlatform.promotionFee || 0));
+      setPlatformFees(String((defaultPlatform.platformFee || 0).toFixed(2)));
+      setPromotionCosts(String((defaultPlatform.promotionFee || 0).toFixed(2)));
     }
   }, []);
 
@@ -1010,8 +1010,8 @@ function POSView({ items, customers, coupons, platforms, onCheckout, onAddCustom
                 // Auto-populate fees from platform config
                 const platform = platforms.find(p => p.id === selectedChannelId);
                 if (platform) {
-                  setPlatformFees(String(platform.platformFee || 0));
-                  setPromotionCosts(String(platform.promotionFee || 0));
+                  setPlatformFees(String((platform.platformFee || 0).toFixed(2)));
+                  setPromotionCosts(String((platform.promotionFee || 0).toFixed(2)));
                 }
               }}
             >
@@ -1078,6 +1078,7 @@ function PlatformsView({ platforms, onAddPlatform, onDeletePlatform, onUpdatePla
   const [newName, setNewName] = useState('');
   const [newPlatformFee, setNewPlatformFee] = useState('');
   const [newPromotionFee, setNewPromotionFee] = useState('');
+  const [editMode, setEditMode] = useState(false);
 
   const handleAdd = () => {
     if (!newName.trim()) return;
@@ -1096,19 +1097,39 @@ function PlatformsView({ platforms, onAddPlatform, onDeletePlatform, onUpdatePla
 
   return (
     <div style={{ padding: 20 }}>
-      <h2 style={{ fontFamily: 'Fraunces, serif', color: COLORS.cream, fontSize: 20, marginBottom: 20 }}>Sales Platforms & Default Fees</h2>
-      <p style={{ fontFamily: 'Jost, sans-serif', color: COLORS.creamDim, fontSize: 13, marginBottom: 20 }}>Set platform fees and default promotion costs. These will auto-fill in POS when you select a channel.</p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <h2 style={{ fontFamily: 'Fraunces, serif', color: COLORS.cream, fontSize: 20, margin: 0 }}>Sales Platforms & Default Fees</h2>
+        <button 
+          onClick={() => setEditMode(!editMode)} 
+          style={{ 
+            padding: '8px 16px', 
+            background: editMode ? COLORS.oxblood : COLORS.brass, 
+            color: editMode ? COLORS.paper : COLORS.espresso,
+            border: 'none', 
+            borderRadius: 6, 
+            cursor: 'pointer', 
+            fontFamily: 'Jost, sans-serif', 
+            fontSize: 12, 
+            fontWeight: 600 
+          }}
+        >
+          {editMode ? '✓ Done Editing' : '✎ Edit Settings'}
+        </button>
+      </div>
+      <p style={{ fontFamily: 'Jost, sans-serif', color: COLORS.creamDim, fontSize: 13, marginBottom: 20 }}>
+        {editMode ? 'Edit mode ON - Click "Done Editing" to lock changes' : 'Click "Edit Settings" to modify platform fees'}
+      </p>
       
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16, marginBottom: 30 }}>
         {platforms.map(p => (
-          <div key={p.id} style={{ background: COLORS.espressoSoft, border: `1px solid ${COLORS.brown}`, borderRadius: 8, padding: 16 }}>
+          <div key={p.id} style={{ background: COLORS.espressoSoft, border: `1px solid ${editMode ? COLORS.brass : COLORS.brown}`, borderRadius: 8, padding: 16, opacity: editMode ? 1 : 0.8 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
               <div>
                 <div style={{ fontFamily: 'Fraunces, serif', fontWeight: 700, color: COLORS.brass, fontSize: 14 }}>{p.name}</div>
                 <div style={{ fontFamily: 'Jost, sans-serif', color: COLORS.creamDim, fontSize: 11, marginTop: 2 }}>ID: {p.id}</div>
               </div>
               {p.id !== 'instore' && (
-                <button onClick={() => onDeletePlatform(p.id)} style={{ padding: '4px 8px', background: COLORS.oxblood, color: COLORS.paper, border: 'none', borderRadius: 4, cursor: 'pointer', fontFamily: 'Jost, sans-serif', fontSize: 10, fontWeight: 600 }}>
+                <button onClick={() => onDeletePlatform(p.id)} disabled={!editMode} style={{ padding: '4px 8px', background: editMode ? COLORS.oxblood : COLORS.creamDim, color: COLORS.paper, border: 'none', borderRadius: 4, cursor: editMode ? 'pointer' : 'not-allowed', fontFamily: 'Jost, sans-serif', fontSize: 10, fontWeight: 600, opacity: editMode ? 1 : 0.5 }}>
                   Remove
                 </button>
               )}
@@ -1116,27 +1137,39 @@ function PlatformsView({ platforms, onAddPlatform, onDeletePlatform, onUpdatePla
             
             <div style={{ marginBottom: 10 }}>
               <label style={{ display: 'block', fontFamily: 'Jost, sans-serif', fontSize: 11, color: COLORS.creamDim, marginBottom: 4, fontWeight: 600 }}>Platform Fee $</label>
-              <input
-                type="number"
-                value={p.platformFee || ''}
-                onChange={e => onUpdatePlatform(p.id, { platformFee: parseFloat(e.target.value) || 0 })}
-                placeholder="0.00"
-                step="0.01"
-                style={{ ...inputStyle, width: '100%', padding: '8px 12px', fontFamily: 'Jost, sans-serif', fontSize: 13 }}
-              />
+              {editMode ? (
+                <input
+                  type="number"
+                  value={p.platformFee || ''}
+                  onChange={e => onUpdatePlatform(p.id, { platformFee: parseFloat(e.target.value) || 0 })}
+                  placeholder="0.00"
+                  step="0.01"
+                  style={{ ...inputStyle, width: '100%', padding: '8px 12px', fontFamily: 'Jost, sans-serif', fontSize: 13 }}
+                />
+              ) : (
+                <div style={{ ...inputStyle, width: '100%', padding: '8px 12px', fontFamily: 'Jost, sans-serif', fontSize: 13, background: COLORS.paper, border: `1px solid ${COLORS.brown}`, borderRadius: 4, color: COLORS.cream }}>
+                  ${(p.platformFee || 0).toFixed(2)}
+                </div>
+              )}
               <div style={{ fontFamily: 'Jost, sans-serif', fontSize: 10, color: COLORS.creamDim, marginTop: 2 }}>e.g., eBay fees, TCG Player commission</div>
             </div>
 
             <div>
               <label style={{ display: 'block', fontFamily: 'Jost, sans-serif', fontSize: 11, color: COLORS.creamDim, marginBottom: 4, fontWeight: 600 }}>Default Promo Cost $</label>
-              <input
-                type="number"
-                value={p.promotionFee || ''}
-                onChange={e => onUpdatePlatform(p.id, { promotionFee: parseFloat(e.target.value) || 0 })}
-                placeholder="0.00"
-                step="0.01"
-                style={{ ...inputStyle, width: '100%', padding: '8px 12px', fontFamily: 'Jost, sans-serif', fontSize: 13 }}
-              />
+              {editMode ? (
+                <input
+                  type="number"
+                  value={p.promotionFee || ''}
+                  onChange={e => onUpdatePlatform(p.id, { promotionFee: parseFloat(e.target.value) || 0 })}
+                  placeholder="0.00"
+                  step="0.01"
+                  style={{ ...inputStyle, width: '100%', padding: '8px 12px', fontFamily: 'Jost, sans-serif', fontSize: 13 }}
+                />
+              ) : (
+                <div style={{ ...inputStyle, width: '100%', padding: '8px 12px', fontFamily: 'Jost, sans-serif', fontSize: 13, background: COLORS.paper, border: `1px solid ${COLORS.brown}`, borderRadius: 4, color: COLORS.cream }}>
+                  ${(p.promotionFee || 0).toFixed(2)}
+                </div>
+              )}
               <div style={{ fontFamily: 'Jost, sans-serif', fontSize: 10, color: COLORS.creamDim, marginTop: 2 }}>Optional: ads, promoted listings, boosts</div>
             </div>
           </div>
