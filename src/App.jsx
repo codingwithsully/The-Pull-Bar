@@ -439,7 +439,7 @@ function AddItemModal({ onClose, onSave }) {
 }
 
 // ---------- Inventory View ----------
-function InventoryView({ items, onAdd, onDelete }) {
+function InventoryView({ COLORS, items, onAdd, onDelete }) {
   const [query, setQuery] = useState('');
   const [showAdd, setShowAdd] = useState(false);
   const filtered = items.filter(i =>
@@ -519,7 +519,7 @@ function AddCustomerModal({ onClose, onSave }) {
     </Modal>
   );
 }
-function CustomersView({ customers, sales, onAdd, onUpdate }) {
+function CustomersView({ COLORS, customers, sales, onAdd, onUpdate }) {
   const [query, setQuery] = useState('');
   const [showAdd, setShowAdd] = useState(false);
   const [selected, setSelected] = useState(null);
@@ -626,7 +626,7 @@ function AddCouponModal({ onClose, onSave }) {
     </Modal>
   );
 }
-function CouponsView({ coupons, onAdd, onDelete }) {
+function CouponsView({ COLORS, coupons, onAdd, onDelete }) {
   const [showAdd, setShowAdd] = useState(false);
   return (
     <div>
@@ -756,7 +756,7 @@ function CameraScanModal({ onDetect, onClose }) {
 }
 
 // ---------- POS View ----------
-function POSView({ items, customers, coupons, onCheckout, onAddCustomer }) {
+function POSView({ COLORS, items, customers, coupons, onCheckout, onAddCustomer }) {
   const [query, setQuery] = useState('');
   const [cart, setCart] = useState([]);
   const [customerQuery, setCustomerQuery] = useState('');
@@ -977,7 +977,7 @@ function DetailModal({ title, onClose, children }) {
   );
 }
 
-function Dashboard({ items, sales, customers, onApplyMarkdown }) {
+function Dashboard({ COLORS, items, sales, customers, onApplyMarkdown }) {
   const [detail, setDetail] = useState(null); // 'value' | 'cost' | 'revenue' | 'customers' | 'lowStock' | null
 
   const inventoryValue = items.reduce((sum, i) => sum + i.price * i.qty, 0);
@@ -1117,7 +1117,7 @@ const REPORT_TYPES = [
   { id: 'topSellers', label: 'Top Sellers' },
 ];
 
-function ReportsView({ items, sales, customers }) {
+function ReportsView({ COLORS, items, sales, customers }) {
   const [reportType, setReportType] = useState('sales');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
@@ -1240,7 +1240,7 @@ function ReportsView({ items, sales, customers }) {
 
 // ---------- Orders View (online order fulfillment) ----------
 const FULFILLMENT_STATUSES = ['unfulfilled', 'packed', 'shipped', 'delivered'];
-function OrdersView({ sales, onUpdate }) {
+function OrdersView({ COLORS, sales, onUpdate }) {
   const onlineOrders = sales.filter(s => s.channel === 'online').slice().reverse();
   return (
     <div>
@@ -1392,13 +1392,13 @@ export default function App() {
           <div style={{ color: COLORS.creamDim, textAlign: 'center', padding: 60 }}>Loading your inventory...</div>
         ) : (
           <>
-            {tab === 'dashboard' && <Dashboard items={items} sales={sales} customers={customers} onApplyMarkdown={handleApplyMarkdown} />}
-            {tab === 'inventory' && <InventoryView items={items} onAdd={handleAddItem} onDelete={handleDeleteItem} />}
-            {tab === 'pos' && <POSView items={items} customers={customers} coupons={coupons} onCheckout={handleCheckout} onAddCustomer={handleAddCustomer} />}
-            {tab === 'customers' && <CustomersView customers={customers} sales={sales} onAdd={handleAddCustomer} onUpdate={handleUpdateCustomer} />}
-            {tab === 'coupons' && <CouponsView coupons={coupons} onAdd={handleAddCoupon} onDelete={handleDeleteCoupon} />}
-            {tab === 'reports' && <ReportsView items={items} sales={sales} customers={customers} />}
-            {tab === 'orders' && <OrdersView sales={sales} onUpdate={handleUpdateSale} />}
+            {tab === 'dashboard' && <Dashboard COLORS={COLORS} items={items} sales={sales} customers={customers} onApplyMarkdown={handleApplyMarkdown} />}
+            {tab === 'inventory' && <InventoryView COLORS={COLORS} items={items} onAdd={handleAddItem} onDelete={handleDeleteItem} />}
+            {tab === 'pos' && <POSView COLORS={COLORS} items={items} customers={customers} coupons={coupons} onCheckout={handleCheckout} onAddCustomer={handleAddCustomer} />}
+            {tab === 'customers' && <CustomersView COLORS={COLORS} customers={customers} sales={sales} onAdd={handleAddCustomer} onUpdate={handleUpdateCustomer} />}
+            {tab === 'coupons' && <CouponsView COLORS={COLORS} coupons={coupons} onAdd={handleAddCoupon} onDelete={handleDeleteCoupon} />}
+            {tab === 'reports' && <ReportsView COLORS={COLORS} items={items} sales={sales} customers={customers} />}
+            {tab === 'orders' && <OrdersView COLORS={COLORS} sales={sales} onUpdate={handleUpdateSale} />}
           </>
         )}
       </div>
