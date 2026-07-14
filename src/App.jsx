@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, createContext, useContext } from 'react';
 import { LayoutGrid, ShoppingCart, BarChart3, Plus, Search, Trash2, X, Package, TrendingUp, AlertTriangle, Minus, Check, Users, Tag, Star, Camera, FileText, Truck, Download } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
@@ -42,6 +42,13 @@ const THEMES = {
 function getColors(theme = 'light') {
   return THEMES[theme] || THEMES.light;
 }
+
+const ColorContext = createContext();
+const useColors = () => {
+  const context = useContext(ColorContext);
+  if (!context) throw new Error('useColors must be used within ColorProvider');
+  return context;
+};
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 
@@ -245,6 +252,7 @@ function printPackingSlip(sale, COLORS, storeInfo = {}) {
 
 // ---------- Small UI atoms ----------
 function StatCard({ label, value, icon: Icon, accent, onClick }) {
+  const COLORS = useColors();
   return (
     <div onClick={onClick} style={{ background: COLORS.espressoSoft, borderRadius: 12, padding: '18px 20px', border: `1px solid ${COLORS.brown}`, flex: 1, minWidth: 150, cursor: onClick ? 'pointer' : 'default' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: COLORS.creamDim, fontSize: 12, fontFamily: 'Jost, sans-serif', textTransform: 'uppercase', letterSpacing: 1 }}>
@@ -255,17 +263,22 @@ function StatCard({ label, value, icon: Icon, accent, onClick }) {
   );
 }
 function Field({ label, children }) {
+  const COLORS = useColors();
   return (
     <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontFamily: 'Jost, sans-serif', fontSize: 12, color: COLORS.creamDim }}>
       {label}{children}
     </label>
   );
 }
-const inputStyle = {
-  background: COLORS.espressoSoft, border: `1px solid ${COLORS.brown}`, borderRadius: 8,
-  padding: '9px 10px', color: COLORS.cream, fontFamily: 'Jost, sans-serif', fontSize: 14, outline: 'none',
-};
+function useInputStyle() {
+  const COLORS = useColors();
+  return {
+    background: COLORS.espressoSoft, border: `1px solid ${COLORS.brown}`, borderRadius: 8,
+    padding: '9px 10px', color: COLORS.cream, fontFamily: 'Jost, sans-serif', fontSize: 14, outline: 'none',
+  };
+}
 function Button({ children, onClick, variant = 'primary', style, ...rest }) {
+  const COLORS = useColors();
   const base = { border: 'none', borderRadius: 8, padding: '10px 16px', fontFamily: 'Jost, sans-serif', fontWeight: 600, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 };
   const variants = {
     primary: { background: COLORS.brass, color: COLORS.espresso },
@@ -275,6 +288,7 @@ function Button({ children, onClick, variant = 'primary', style, ...rest }) {
   return <button onClick={onClick} style={{ ...base, ...variants[variant], ...style }} {...rest}>{children}</button>;
 }
 function Modal({ title, onClose, children, width = 420 }) {
+  const COLORS = useColors();
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(10,8,6,0.72)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: 16 }}>
       <div style={{ background: COLORS.espressoSoft, borderRadius: 14, padding: 24, width: '100%', maxWidth: width, border: `1px solid ${COLORS.brown}`, maxHeight: '85vh', overflowY: 'auto' }}>
@@ -1355,7 +1369,8 @@ export default function App() {
   ];
 
   return (
-    <div style={{ minHeight: '100vh', background: COLORS.paper, fontFamily: 'Jost, sans-serif' }}>
+    <ColorContext.Provider value={COLORS}>
+      <div style={{ minHeight: '100vh', background: COLORS.paper, fontFamily: 'Jost, sans-serif' }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Jost:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
         * { box-sizing: border-box; }
@@ -1402,7 +1417,8 @@ export default function App() {
           </>
         )}
       </div>
-    </div>
+      </div>
+    </ColorContext.Provider>
   );
 }
 
