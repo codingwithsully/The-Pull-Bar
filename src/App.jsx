@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, createContext, useContext } from 'react';
-import { LayoutGrid, ShoppingCart, BarChart3, Plus, Search, Trash2, X, Package, TrendingUp, AlertTriangle, Minus, Check, Users, Tag, Star, Camera, FileText, Truck, Download } from 'lucide-react';
+import { LayoutGrid, ShoppingCart, BarChart3, Plus, Search, Trash2, X, Package, TrendingUp, AlertTriangle, Minus, Check, Users, Tag, Star, Camera, FileText, Truck, Download, Globe } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 // ---------- Theme system: Light / Dark / High Contrast ----------
@@ -90,6 +90,15 @@ const VARIANTS = [
   { code: 'TG', label: 'Tag Team GX' },
 ];
 
+const DEFAULT_PLATFORMS = [
+  { id: 'instore', name: 'In-Store', icon: 'store' },
+  { id: 'ebay', name: 'eBay', icon: 'ebay' },
+  { id: 'whatnot', name: 'WhatNot', icon: 'whatnot' },
+  { id: 'tcgplayer', name: 'TCG Player', icon: 'tcg' },
+  { id: 'tiktok', name: 'TikTok Shop', icon: 'tiktok' },
+  { id: 'mercari', name: 'Mercari', icon: 'mercari' },
+];
+
 function genSku({ type, game, set, number, variant, condition, language }) {
   if (type === 'accessory') {
     return `ACC-${(game || 'GEN').toUpperCase().slice(0, 3)}-${uid().slice(0, 3).toUpperCase()}`;
@@ -112,7 +121,7 @@ function genSku({ type, game, set, number, variant, condition, language }) {
 const POINTS_PER_DOLLAR = 1;
 const POINT_REDEMPTION_RATE = 0.05;
 
-const storageKeys = { items: 'tcg-inventory-items', sales: 'tcg-sales-log', customers: 'tcg-customers', coupons: 'tcg-coupons' };
+const storageKeys = { items: 'tcg-inventory-items', sales: 'tcg-sales-log', customers: 'tcg-customers', coupons: 'tcg-coupons', platforms: 'tcg-platforms' };
 async function loadKey(key) {
   try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : []; } catch { return []; }
 }
@@ -154,7 +163,7 @@ function downloadXLSX(filename, rows, headers, sheetName = 'Report') {
 
 function printReceipt(sale, storeInfo = {}) {
   const win = window.open('', '_blank');
-  const itemsHtml = sale.lines.map(l => `<tr><td style="padding:4px;border-bottom:1px solid #ddd;text-align:left;">${l.sku || 'N/A'}</td><td style="padding:4px;border-bottom:1px solid #ddd;">${l.name}</td><td style="padding:4px;border-bottom:1px solid #ddd;text-align:center;">×${l.qty}</td><td style="padding:4px;border-bottom:1px solid #ddd;text-align:right;">$${(l.price * l.qty).toFixed(2)}</td></tr>`).join('');
+  const itemsHtml = sale.lines.map(l => `<tr><td style="padding:4px;border-bottom:1px solid #ddd;text-align:left;">${l.sku || 'N/A'}</td><td style="padding:4px;border-bottom:1px solid #ddd;">${l.name}</td><td style="padding:4px;border-bottom:1px solid #ddd;text-align:center;">√ó${l.qty}</td><td style="padding:4px;border-bottom:1px solid #ddd;text-align:right;">$${(l.price * l.qty).toFixed(2)}</td></tr>`).join('');
   win.document.write(`<html><head><title>Receipt ${sale.receiptNumber}</title></head><body style="font-family:'Courier New',monospace;max-width:400px;margin:0 auto;padding:20px;"><div style="text-align:center;margin-bottom:20px;"><div style="font-size:18px;font-weight:bold;">THE PULL BAR</div><div style="font-size:11px;color:#666;">Receipt ${sale.receiptNumber}</div><div style="font-size:11px;color:#666;">${new Date(sale.date).toLocaleString()}</div></div><table style="width:100%;font-size:12px;"><thead><tr style="border-bottom:2px solid #000;"><th style="text-align:left;padding:4px;">SKU</th><th style="text-align:left;padding:4px;">Item</th><th style="text-align:center;padding:4px;">Qty</th><th style="text-align:right;padding:4px;">Total</th></tr></thead><tbody>${itemsHtml}</tbody></table><div style="margin-top:16px;font-size:13px;font-weight:bold;text-align:right;border-top:2px solid #000;padding-top:8px;">Total: $${sale.total.toFixed(2)}</div>${sale.couponCode ? `<div style="text-align:center;font-size:11px;margin-top:8px;color:#666;">Coupon: ${sale.couponCode} (-$${sale.couponDiscount.toFixed(2)})</div>` : ''}${sale.pointsRedeemed > 0 ? `<div style="text-align:center;font-size:11px;color:#666;">Points redeemed: ${sale.pointsRedeemed} (-$${sale.pointsDiscount.toFixed(2)})</div>` : ''}<div style="text-align:center;font-size:11px;margin-top:16px;color:#666;border-top:1px solid #ddd;padding-top:8px;">Thank you for your business!</div></body></html>`);
   win.document.close();
   win.focus();
@@ -163,7 +172,7 @@ function printReceipt(sale, storeInfo = {}) {
 
 function printPackingSlip(sale, storeInfo = {}) {
   const win = window.open('', '_blank');
-  const itemsHtml = sale.lines.map(l => `<tr><td style="padding:8px;border-bottom:1px solid #ddd;font-weight:bold;">${l.sku}</td><td style="padding:8px;border-bottom:1px solid #ddd;">${l.name}</td><td style="padding:8px;border-bottom:1px solid #ddd;text-align:center;">×${l.qty}</td></tr>`).join('');
+  const itemsHtml = sale.lines.map(l => `<tr><td style="padding:8px;border-bottom:1px solid #ddd;font-weight:bold;">${l.sku}</td><td style="padding:8px;border-bottom:1px solid #ddd;">${l.name}</td><td style="padding:8px;border-bottom:1px solid #ddd;text-align:center;">√ó${l.qty}</td></tr>`).join('');
   win.document.write(`<html><head><title>Packing Slip ${sale.receiptNumber}</title></head><body style="font-family:Arial,sans-serif;max-width:800px;margin:0 auto;padding:40px;line-height:1.6;"><div style="display:flex;justify-content:space-between;margin-bottom:30px;"><div><div style="font-size:20px;font-weight:bold;">THE PULL BAR</div><div style="font-size:12px;color:#666;">${storeInfo.address || 'Store Address'}</div><div style="font-size:12px;color:#666;">${storeInfo.phone || 'Phone'}</div></div><div style="text-align:right;"><div style="font-size:14px;font-weight:bold;">PACKING SLIP</div><div style="font-size:12px;">Receipt #: ${sale.receiptNumber}</div><div style="font-size:12px;">Date: ${new Date(sale.date).toLocaleDateString()}</div></div></div><div style="margin-bottom:30px;padding:15px;background:#f5f5f5;border-radius:5px;"><div style="font-weight:bold;margin-bottom:8px;">SHIP TO:</div><div style="font-size:14px;white-space:pre-wrap;">${sale.shippingAddress}</div></div><table style="width:100%;margin-bottom:30px;font-size:13px;"><thead><tr style="border-bottom:2px solid #000;"><th style="text-align:left;padding:8px;">SKU</th><th style="text-align:left;padding:8px;">Item Description</th><th style="text-align:center;padding:8px;">Quantity</th></tr></thead><tbody>${itemsHtml}</tbody></table><div style="border-top:1px solid #ddd;padding-top:20px;font-size:11px;color:#666;line-height:1.8;"><strong>Return Policy:</strong> Items may be returned within 7 days of receipt in original condition for full refund. Clearance and final-sale items are non-returnable.</div></body></html>`);
   win.document.close();
   win.focus();
@@ -370,7 +379,7 @@ function AddItemModal({ onClose, onSave, existingItems = [] }) {
                       {variantQuery && <div style={{ padding: '8px 12px', fontFamily: 'Jost, sans-serif', fontSize: 10, color: COLORS.creamDim, fontWeight: 600, textTransform: 'uppercase' }}>Matching:</div>}
                       {filteredVariants.map(v => (
                         <div key={v.code} onClick={() => { setVariant(v.code); setVariantQuery(v.label); setShowVariantDropdown(false); }} style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: `1px solid ${COLORS.brown}`, color: COLORS.cream, fontSize: 13, fontFamily: 'Jost, sans-serif', background: variant === v.code ? COLORS.brown : 'transparent' }}>
-                          <span style={{ fontWeight: 600, color: COLORS.brass }}>{v.code}</span> — {v.label}
+                          <span style={{ fontWeight: 600, color: COLORS.brass }}>{v.code}</span> ‚Äî {v.label}
                         </div>
                       ))}
                     </>
@@ -384,7 +393,7 @@ function AddItemModal({ onClose, onSave, existingItems = [] }) {
                       <div style={{ padding: '8px 12px', fontFamily: 'Jost, sans-serif', fontSize: 10, color: COLORS.creamDim, fontWeight: 600, textTransform: 'uppercase', background: COLORS.paper }}>All variants:</div>
                       {VARIANTS.map(v => (
                         <div key={v.code} onClick={() => { setVariant(v.code); setVariantQuery(v.label); setShowVariantDropdown(false); }} style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: `1px solid ${COLORS.brown}`, color: COLORS.cream, fontSize: 12, fontFamily: 'Jost, sans-serif', background: variant === v.code ? COLORS.brown : 'transparent' }}>
-                          <span style={{ fontWeight: 600, color: COLORS.brass }}>{v.code}</span> — {v.label}
+                          <span style={{ fontWeight: 600, color: COLORS.brass }}>{v.code}</span> ‚Äî {v.label}
                         </div>
                       ))}
                     </>
@@ -394,7 +403,7 @@ function AddItemModal({ onClose, onSave, existingItems = [] }) {
             </div>
           </Field>
 
-          <Field label="Condition"><select style={inputStyle} value={condition} onChange={e => setCondition(e.target.value)}>{CONDITIONS.map(c => <option key={c} value={c}>{c} — {CONDITION_LABELS[c]}</option>)}</select></Field>
+          <Field label="Condition"><select style={inputStyle} value={condition} onChange={e => setCondition(e.target.value)}>{CONDITIONS.map(c => <option key={c} value={c}>{c} ‚Äî {CONDITION_LABELS[c]}</option>)}</select></Field>
         </>
       )}
       <Field label="Cost $"><input style={inputStyle} type="number" value={cost} onChange={e => setCost(e.target.value)} placeholder="0.00" /></Field>
@@ -402,14 +411,14 @@ function AddItemModal({ onClose, onSave, existingItems = [] }) {
       <Field label="Quantity"><input style={inputStyle} type="number" value={qty} onChange={e => setQty(e.target.value)} placeholder="1" /></Field>
       <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'Jost, sans-serif', fontSize: 13, color: COLORS.cream, marginBottom: 12 }}>
         <input type="checkbox" checked={hold} onChange={e => setHold(e.target.checked)} />
-        Hold — collectible, never mark down automatically
+        Hold ‚Äî collectible, never mark down automatically
       </label>
       {!hold && (
         <div style={{ marginBottom: 16 }}>
           <div style={{ fontFamily: 'Fraunces, serif', color: COLORS.cream, fontWeight: 700, marginBottom: 8 }}>Markdown schedule (optional)</div>
           {schedule.map((s, idx) => (
             <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, padding: '8px', background: COLORS.espressoSoft, borderRadius: 6 }}>
-              <span style={{ fontFamily: 'Jost, sans-serif', fontSize: 12, color: COLORS.cream }}>After {s.days} days → {s.percent}% off</span>
+              <span style={{ fontFamily: 'Jost, sans-serif', fontSize: 12, color: COLORS.cream }}>After {s.days} days ‚Üí {s.percent}% off</span>
               <button onClick={() => removeScheduleRow(idx)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: COLORS.oxblood }}><Trash2 size={14} /></button>
             </div>
           ))}
@@ -545,7 +554,7 @@ function CameraScanModal({ onDetect, onClose }) {
       <div ref={videoTargetRef} style={{ width: '100%', height: 300, background: COLORS.paper, borderRadius: 8, marginBottom: 16 }} />
       {status === 'loading' && <div style={{ textAlign: 'center', color: COLORS.creamDim, fontFamily: 'Jost, sans-serif' }}>Starting camera...</div>}
       {status === 'error' && <div style={{ textAlign: 'center', color: COLORS.oxblood, fontFamily: 'Jost, sans-serif' }}>{errorMsg}</div>}
-      {status === 'scanning' && <div style={{ textAlign: 'center', color: COLORS.creamDim, fontFamily: 'Jost, sans-serif', fontSize: 12 }}>Point camera at barcode — it will add automatically.</div>}
+      {status === 'scanning' && <div style={{ textAlign: 'center', color: COLORS.creamDim, fontFamily: 'Jost, sans-serif', fontSize: 12 }}>Point camera at barcode ‚Äî it will add automatically.</div>}
       {lastScanned && <div style={{ textAlign: 'center', color: COLORS.brass, fontFamily: 'JetBrains Mono, monospace', fontSize: 12, marginTop: 10 }}>Last: {lastScanned}</div>}
       <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
         <Button onClick={onClose} style={{ flex: 1, justifyContent: 'center' }}>Done</Button>
@@ -580,7 +589,7 @@ function InventoryView({ items, onAdd, onDelete }) {
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ color: COLORS.brass, fontFamily: 'Fraunces, serif', fontSize: 16, fontWeight: 700 }}>${item.price.toFixed(2)}</div>
-                <div style={{ color: COLORS.creamDim, fontFamily: 'Jost, sans-serif', fontSize: 11 }}>cost ${item.cost.toFixed(2)} · qty {item.qty}</div>
+                <div style={{ color: COLORS.creamDim, fontFamily: 'Jost, sans-serif', fontSize: 11 }}>cost ${item.cost.toFixed(2)} ¬∑ qty {item.qty}</div>
               </div>
               <button onClick={() => onDelete(item.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: COLORS.oxblood }}><Trash2 size={16} /></button>
             </div>
@@ -601,6 +610,11 @@ function Dashboard({ items, sales, customers, onApplyMarkdown }) {
   const inventoryValue = items.reduce((sum, i) => sum + i.price * i.qty, 0);
   const inventoryCost = items.reduce((sum, i) => sum + i.cost * i.qty, 0);
   const totalRevenue = sales.reduce((sum, s) => sum + s.total, 0);
+  const totalCOGS = sales.reduce((sum, s) => sum + (s.costOfGoods || 0), 0);
+  const totalShipping = sales.reduce((sum, s) => sum + (s.shippingPaidBy === 'me' ? s.shippingCost : 0), 0);
+  const totalPlatformFees = sales.reduce((sum, s) => sum + (s.platformFees || 0), 0);
+  const totalPromoCosts = sales.reduce((sum, s) => sum + (s.promotionCosts || 0), 0);
+  const netProfit = totalRevenue - totalCOGS - totalShipping - totalPlatformFees - totalPromoCosts;
   const lowStock = items.filter(i => i.qty <= 1);
 
   const topSellers = (() => {
@@ -616,7 +630,7 @@ function Dashboard({ items, sales, customers, onApplyMarkdown }) {
   if (detail) {
     return (
       <div>
-        <button onClick={() => setDetail(null)} style={{ marginBottom: 18, padding: '8px 14px', background: COLORS.brass, color: COLORS.espresso, border: 'none', borderRadius: 8, cursor: 'pointer', fontFamily: 'Jost, sans-serif', fontWeight: 600 }}>← Back to Dashboard</button>
+        <button onClick={() => setDetail(null)} style={{ marginBottom: 18, padding: '8px 14px', background: COLORS.brass, color: COLORS.espresso, border: 'none', borderRadius: 8, cursor: 'pointer', fontFamily: 'Jost, sans-serif', fontWeight: 600 }}>‚Üê Back to Dashboard</button>
         <h2 style={{ fontFamily: 'Fraunces, serif', color: COLORS.cream, fontSize: 20, marginBottom: 16 }}>
           {detail === 'value' && 'Inventory Value Breakdown'}
           {detail === 'cost' && 'Inventory Cost Breakdown'}
@@ -629,25 +643,25 @@ function Dashboard({ items, sales, customers, onApplyMarkdown }) {
             <tbody>
               {detail === 'value' && items.slice().sort((a, b) => (b.price * b.qty) - (a.price * a.qty)).map(i => (
                 <tr key={i.id} style={{ borderBottom: `1px solid ${COLORS.brown}` }}>
-                  <td style={{ padding: '10px 14px', color: COLORS.cream }}>{i.name} · qty {i.qty}</td>
+                  <td style={{ padding: '10px 14px', color: COLORS.cream }}>{i.name} ¬∑ qty {i.qty}</td>
                   <td style={{ padding: '10px 14px', textAlign: 'right', color: COLORS.brass, fontWeight: 600 }}>${(i.price * i.qty).toFixed(2)}</td>
                 </tr>
               ))}
               {detail === 'cost' && items.slice().sort((a, b) => (b.cost * b.qty) - (a.cost * a.qty)).map(i => (
                 <tr key={i.id} style={{ borderBottom: `1px solid ${COLORS.brown}` }}>
-                  <td style={{ padding: '10px 14px', color: COLORS.cream }}>{i.name} · qty {i.qty}</td>
+                  <td style={{ padding: '10px 14px', color: COLORS.cream }}>{i.name} ¬∑ qty {i.qty}</td>
                   <td style={{ padding: '10px 14px', textAlign: 'right', color: COLORS.brass, fontWeight: 600 }}>${(i.cost * i.qty).toFixed(2)}</td>
                 </tr>
               ))}
               {detail === 'revenue' && sales.slice().reverse().map(s => (
                 <tr key={s.id} style={{ borderBottom: `1px solid ${COLORS.brown}` }}>
-                  <td style={{ padding: '10px 14px', color: COLORS.cream }}>{new Date(s.date).toLocaleDateString()} · {s.lines.map(l => `${l.name} ×${l.qty}`).join(', ')}{s.customerName ? ` · ${s.customerName}` : ''}</td>
+                  <td style={{ padding: '10px 14px', color: COLORS.cream }}>{new Date(s.date).toLocaleDateString()} ¬∑ {s.lines.map(l => `${l.name} √ó${l.qty}`).join(', ')}{s.customerName ? ` ¬∑ ${s.customerName}` : ''}</td>
                   <td style={{ padding: '10px 14px', textAlign: 'right', color: COLORS.brass, fontWeight: 600 }}>${s.total.toFixed(2)}</td>
                 </tr>
               ))}
               {detail === 'customers' && customers.map(c => (
                 <tr key={c.id} style={{ borderBottom: `1px solid ${COLORS.brown}` }}>
-                  <td style={{ padding: '10px 14px', color: COLORS.cream }}>{c.name} · {[c.phone, c.email].filter(Boolean).join(' · ')}</td>
+                  <td style={{ padding: '10px 14px', color: COLORS.cream }}>{c.name} ¬∑ {[c.phone, c.email].filter(Boolean).join(' ¬∑ ')}</td>
                   <td style={{ padding: '10px 14px', textAlign: 'right', color: COLORS.brass, fontWeight: 600 }}>{c.points} pts</td>
                 </tr>
               ))}
@@ -670,6 +684,7 @@ function Dashboard({ items, sales, customers, onApplyMarkdown }) {
         <StatCard label="Inventory value" value={`$${inventoryValue.toFixed(2)}`} icon={Package} onClick={() => setDetail('value')} />
         <StatCard label="Inventory cost" value={`$${inventoryCost.toFixed(2)}`} icon={TrendingUp} onClick={() => setDetail('cost')} />
         <StatCard label="Total revenue" value={`$${totalRevenue.toFixed(2)}`} icon={BarChart3} onClick={() => setDetail('revenue')} />
+        <StatCard label="Net profit" value={`$${netProfit.toFixed(2)}`} icon={TrendingUp} accent={netProfit >= 0 ? COLORS.brass : COLORS.oxblood} />
         <StatCard label="Customers" value={customers.length} icon={Users} onClick={() => setDetail('customers')} />
         <StatCard label="Low stock" value={lowStock.length} icon={AlertTriangle} accent={COLORS.oxblood} onClick={() => setDetail('lowStock')} />
       </div>
@@ -681,7 +696,7 @@ function Dashboard({ items, sales, customers, onApplyMarkdown }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {topSellers.map((t, idx) => (
             <div key={t.name} style={{ display: 'flex', justifyContent: 'space-between', background: COLORS.espressoSoft, border: `1px solid ${COLORS.brown}`, borderRadius: 8, padding: '10px 14px', fontFamily: 'Jost, sans-serif', fontSize: 13 }}>
-              <span style={{ color: COLORS.cream }}><span style={{ color: COLORS.brass, fontFamily: 'JetBrains Mono, monospace', marginRight: 8 }}>#{idx + 1}</span>{t.name} · {t.qty} sold</span>
+              <span style={{ color: COLORS.cream }}><span style={{ color: COLORS.brass, fontFamily: 'JetBrains Mono, monospace', marginRight: 8 }}>#{idx + 1}</span>{t.name} ¬∑ {t.qty} sold</span>
               <span style={{ color: COLORS.brass, fontWeight: 600 }}>${t.revenue.toFixed(2)}</span>
             </div>
           ))}
@@ -695,7 +710,7 @@ function Dashboard({ items, sales, customers, onApplyMarkdown }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {sales.slice().reverse().slice(0, 8).map(s => (
             <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', background: COLORS.espressoSoft, border: `1px solid ${COLORS.brown}`, borderRadius: 8, padding: '10px 14px', fontFamily: 'Jost, sans-serif', fontSize: 13 }}>
-              <span style={{ color: COLORS.cream }}>{s.receiptNumber} · {s.lines.map(l => `${l.name} ×${l.qty}`).join(', ')}{s.customerName ? ` · ${s.customerName}` : ''}</span>
+              <span style={{ color: COLORS.cream }}>{s.receiptNumber} ¬∑ {s.lines.map(l => `${l.name} √ó${l.qty}`).join(', ')}{s.customerName ? ` ¬∑ ${s.customerName}` : ''}</span>
               <span style={{ color: COLORS.brass, fontWeight: 600 }}>${s.total.toFixed(2)}</span>
             </div>
           ))}
@@ -744,7 +759,7 @@ function CustomersView({ customers, sales, onAdd, onUpdate }) {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <div style={{ color: COLORS.cream, fontFamily: 'Jost, sans-serif', fontWeight: 600, fontSize: 14 }}>{c.name}</div>
-                    <div style={{ color: COLORS.creamDim, fontFamily: 'Jost, sans-serif', fontSize: 12 }}>{[c.phone, c.email].filter(Boolean).join(' · ')}</div>
+                    <div style={{ color: COLORS.creamDim, fontFamily: 'Jost, sans-serif', fontSize: 12 }}>{[c.phone, c.email].filter(Boolean).join(' ¬∑ ')}</div>
                   </div>
                   <div style={{ color: COLORS.brass, fontFamily: 'Fraunces, serif', fontWeight: 700, fontSize: 16 }}>{c.points} pts</div>
                 </div>
@@ -758,7 +773,7 @@ function CustomersView({ customers, sales, onAdd, onUpdate }) {
                     <div style={{ marginBottom: 12 }}>
                       {customerSales.slice().reverse().map(s => (
                         <div key={s.id} style={{ padding: '6px 0', borderBottom: `1px solid ${COLORS.brown}`, color: COLORS.creamDim, fontFamily: 'Jost, sans-serif', fontSize: 12 }}>
-                          {s.lines.map(l => `${l.name} ×${l.qty}`).join(', ')} — ${s.total.toFixed(2)}
+                          {s.lines.map(l => `${l.name} √ó${l.qty}`).join(', ')} ‚Äî ${s.total.toFixed(2)}
                         </div>
                       ))}
                     </div>
@@ -798,7 +813,7 @@ function CouponsView({ coupons, onAdd, onDelete }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {coupons.map(c => (
             <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: COLORS.espressoSoft, border: `1px solid ${COLORS.brown}`, borderRadius: 10, padding: '12px 16px' }}>
-              <div style={{ color: COLORS.cream, fontFamily: 'Jost, sans-serif', fontWeight: 600 }}>{c.code} · {c.type === 'percent' ? `${c.value}% off` : `$${c.value.toFixed(2)} off`}</div>
+              <div style={{ color: COLORS.cream, fontFamily: 'Jost, sans-serif', fontWeight: 600 }}>{c.code} ¬∑ {c.type === 'percent' ? `${c.value}% off` : `$${c.value.toFixed(2)} off`}</div>
               <button onClick={() => onDelete(c.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: COLORS.oxblood }}><Trash2 size={16} /></button>
             </div>
           ))}
@@ -822,6 +837,11 @@ function POSView({ items, customers, coupons, onCheckout, onAddCustomer }) {
   const [redeemPoints, setRedeemPoints] = useState('');
   const [isOnlineOrder, setIsOnlineOrder] = useState(false);
   const [shippingAddress, setShippingAddress] = useState('');
+  const [channel, setChannel] = useState('instore');
+  const [shippingCost, setShippingCost] = useState('');
+  const [shippingPaidBy, setShippingPaidBy] = useState('user');
+  const [platformFees, setPlatformFees] = useState('');
+  const [promotionCosts, setPromotionCosts] = useState('');
   const inputRef = useRef(null);
 
   useEffect(() => { inputRef.current?.focus(); }, []);
@@ -868,8 +888,8 @@ function POSView({ items, customers, coupons, onCheckout, onAddCustomer }) {
 
   const handleCheckout = () => {
     if (cartLines.length === 0) return;
-    onCheckout({ cartLines, customer: selectedCustomer, couponCode: appliedCoupon?.code, couponDiscount, pointsRedeemed: pointsToRedeem, pointsDiscount, pointsEarned, total, isOnlineOrder, shippingAddress: isOnlineOrder ? shippingAddress : '' });
-    setCart([]); setCouponCode(''); setRedeemPoints(''); setSelectedCustomer(null); setCustomerQuery(''); setIsOnlineOrder(false); setShippingAddress('');
+    onCheckout({ cartLines, customer: selectedCustomer, couponCode: appliedCoupon?.code, couponDiscount, pointsRedeemed: pointsToRedeem, pointsDiscount, pointsEarned, total, isOnlineOrder, shippingAddress: isOnlineOrder ? shippingAddress : '', channel, shippingCost: parseFloat(shippingCost) || 0, shippingPaidBy, platformFees: parseFloat(platformFees) || 0, promotionCosts: parseFloat(promotionCosts) || 0 });
+    setCart([]); setCouponCode(''); setRedeemPoints(''); setSelectedCustomer(null); setCustomerQuery(''); setIsOnlineOrder(false); setShippingAddress(''); setChannel('instore'); setShippingCost(''); setShippingPaidBy('user'); setPlatformFees(''); setPromotionCosts('');
   };
 
   return (
@@ -894,7 +914,7 @@ function POSView({ items, customers, coupons, onCheckout, onAddCustomer }) {
         <div style={{ fontFamily: 'Fraunces, serif', color: COLORS.cream, fontWeight: 700, marginBottom: 10, fontSize: 15 }}>Customer (optional)</div>
         {selectedCustomer ? (
           <div style={{ background: COLORS.espressoSoft, border: `1px solid ${COLORS.brass}`, borderRadius: 10, padding: '10px 12px', marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ color: COLORS.cream, fontFamily: 'Jost, sans-serif', fontWeight: 600 }}>{selectedCustomer.name} · {selectedCustomer.points} pts</span>
+            <span style={{ color: COLORS.cream, fontFamily: 'Jost, sans-serif', fontWeight: 600 }}>{selectedCustomer.name} ¬∑ {selectedCustomer.points} pts</span>
             <button onClick={() => setSelectedCustomer(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: COLORS.creamDim }}><X size={16} /></button>
           </div>
         ) : (
@@ -969,6 +989,46 @@ function POSView({ items, customers, coupons, onCheckout, onAddCustomer }) {
 
         {selectedCustomer && <div style={{ color: COLORS.brass, fontFamily: 'Jost, sans-serif', fontSize: 11, marginBottom: 12, textAlign: 'center' }}>Earns {pointsEarned} pts for {selectedCustomer.name}</div>}
 
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontFamily: 'Fraunces, serif', color: COLORS.cream, fontWeight: 700, marginBottom: 8, fontSize: 13 }}>Sale Channel & Costs</div>
+          
+          <Field label="Channel">
+            <select style={useInputStyle()} value={channel} onChange={e => setChannel(e.target.value)}>
+              <option value="instore">In-Store</option>
+              <option value="ebay">eBay</option>
+              <option value="whatnot">WhatNot</option>
+              <option value="tcgplayer">TCG Player</option>
+              <option value="tiktok">TikTok Shop</option>
+              <option value="mercari">Mercari</option>
+            </select>
+          </Field>
+
+          <Field label="Shipping Cost $">
+            <input style={useInputStyle()} type="number" value={shippingCost} onChange={e => setShippingCost(e.target.value)} placeholder="0.00" step="0.01" />
+          </Field>
+
+          {shippingCost && (
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, fontFamily: 'Jost, sans-serif', fontSize: 12, color: COLORS.cream, cursor: 'pointer' }}>
+              <input type="radio" checked={shippingPaidBy === 'user'} onChange={() => setShippingPaidBy('user')} />
+              Customer paid
+            </label>
+          )}
+          {shippingCost && (
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, fontFamily: 'Jost, sans-serif', fontSize: 12, color: COLORS.cream, cursor: 'pointer' }}>
+              <input type="radio" checked={shippingPaidBy === 'me'} onChange={() => setShippingPaidBy('me')} />
+              I paid (deduct from profit)
+            </label>
+          )}
+
+          <Field label="Platform Fees $">
+            <input style={useInputStyle()} type="number" value={platformFees} onChange={e => setPlatformFees(e.target.value)} placeholder="0.00" step="0.01" />
+          </Field>
+
+          <Field label="Promotion Cost $">
+            <input style={useInputStyle()} type="number" value={promotionCosts} onChange={e => setPromotionCosts(e.target.value)} placeholder="0.00" step="0.01" />
+          </Field>
+        </div>
+
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, fontFamily: 'Jost, sans-serif', fontSize: 12, color: COLORS.cream, cursor: 'pointer' }}>
           <input type="checkbox" checked={isOnlineOrder} onChange={e => setIsOnlineOrder(e.target.checked)} />
           Online order
@@ -990,7 +1050,58 @@ const REPORT_TYPES = [
   { id: 'inventory', label: 'Inventory' },
   { id: 'customers', label: 'Customers' },
   { id: 'topSellers', label: 'Top Sellers' },
+  { id: 'profitAndLoss', label: 'P&L (Profit & Loss)' },
+  { id: 'channelBreakdown', label: 'Channel Breakdown' },
 ];
+
+function PlatformsView({ platforms, onAddPlatform, onDeletePlatform }) {
+  const COLORS = useColors();
+  const inputStyle = useInputStyle();
+  const [newName, setNewName] = useState('');
+
+  const handleAdd = () => {
+    if (!newName.trim()) return;
+    const id = newName.toLowerCase().replace(/\s+/g, '-');
+    onAddPlatform({ id, name: newName, icon: 'custom' });
+    setNewName('');
+  };
+
+  return (
+    <div style={{ padding: 20 }}>
+      <h2 style={{ fontFamily: 'Fraunces, serif', color: COLORS.cream, fontSize: 20, marginBottom: 20 }}>Sales Platforms</h2>
+      
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12, marginBottom: 30 }}>
+        {platforms.map(p => (
+          <div key={p.id} style={{ background: COLORS.paper, border: `2px solid ${COLORS.brass}`, borderRadius: 8, padding: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <div style={{ fontFamily: 'Fraunces, serif', fontWeight: 700, color: COLORS.brass, fontSize: 13 }}>{p.name}</div>
+              <div style={{ fontFamily: 'Jost, sans-serif', color: COLORS.creamDim, fontSize: 11, marginTop: 4 }}>{p.id}</div>
+            </div>
+            {p.id !== 'instore' && (
+              <button onClick={() => onDeletePlatform(p.id)} style={{ padding: 6, background: COLORS.oxblood, color: COLORS.paper, border: 'none', borderRadius: 4, cursor: 'pointer', fontFamily: 'Jost, sans-serif', fontSize: 11, fontWeight: 600 }}>
+                Remove
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <div style={{ background: COLORS.paper, border: `1px solid ${COLORS.brown}`, borderRadius: 8, padding: 16 }}>
+        <div style={{ fontFamily: 'Fraunces, serif', fontWeight: 700, color: COLORS.brass, marginBottom: 12 }}>Add New Platform</div>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <input
+            type="text"
+            value={newName}
+            onChange={e => setNewName(e.target.value)}
+            placeholder="e.g., Depop, Poshmark, Amazon"
+            style={useInputStyle()}
+          />
+          <Button onClick={handleAdd} style={{ minWidth: 100 }}>Add Platform</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function ReportsView({ items, sales, customers }) {
   const COLORS = useColors();
@@ -1044,6 +1155,58 @@ function ReportsView({ items, sales, customers }) {
         return Object.values(map).sort((a, b) => b.qty - a.qty).map(r => ({ ...r, revenue: r.revenue.toFixed(2) }));
       })(),
     },
+    profitAndLoss: {
+      headers: [
+        { key: 'metric', label: 'Metric' },
+        { key: 'amount', label: 'Amount' },
+      ],
+      rows: (() => {
+        const totalRevenue = filteredSales.reduce((sum, s) => sum + s.total, 0);
+        const totalCOGS = filteredSales.reduce((sum, s) => sum + (s.costOfGoods || 0), 0);
+        const totalShipping = filteredSales.reduce((sum, s) => sum + (s.shippingPaidBy === 'me' ? s.shippingCost : 0), 0);
+        const totalFees = filteredSales.reduce((sum, s) => sum + (s.platformFees || 0), 0);
+        const totalPromo = filteredSales.reduce((sum, s) => sum + (s.promotionCosts || 0), 0);
+        const netProfit = totalRevenue - totalCOGS - totalShipping - totalFees - totalPromo;
+        return [
+          { metric: 'Total Revenue', amount: totalRevenue.toFixed(2) },
+          { metric: 'Cost of Goods', amount: totalCOGS.toFixed(2) },
+          { metric: 'Gross Profit', amount: (totalRevenue - totalCOGS).toFixed(2) },
+          { metric: 'Shipping (you paid)', amount: totalShipping.toFixed(2) },
+          { metric: 'Platform Fees', amount: totalFees.toFixed(2) },
+          { metric: 'Promotion Costs', amount: totalPromo.toFixed(2) },
+          { metric: 'NET PROFIT', amount: netProfit.toFixed(2) },
+        ];
+      })(),
+    },
+    channelBreakdown: {
+      headers: [
+        { key: 'channel', label: 'Channel' },
+        { key: 'sales', label: 'Sales' },
+        { key: 'revenue', label: 'Revenue' },
+        { key: 'cogs', label: 'COGS' },
+        { key: 'profit', label: 'Net Profit' },
+      ],
+      rows: (() => {
+        const channels = {};
+        filteredSales.forEach(s => {
+          const ch = s.channel || 'instore';
+          if (!channels[ch]) channels[ch] = { channel: ch, sales: 0, revenue: 0, cogs: 0, totalFees: 0, totalPromo: 0, totalShipping: 0 };
+          channels[ch].sales += 1;
+          channels[ch].revenue += s.total;
+          channels[ch].cogs += s.costOfGoods || 0;
+          channels[ch].totalFees += s.platformFees || 0;
+          channels[ch].totalPromo += s.promotionCosts || 0;
+          if (s.shippingPaidBy === 'me') channels[ch].totalShipping += s.shippingCost;
+        });
+        return Object.values(channels).map(c => ({
+          channel: c.channel.charAt(0).toUpperCase() + c.channel.slice(1),
+          sales: c.sales,
+          revenue: c.revenue.toFixed(2),
+          cogs: c.cogs.toFixed(2),
+          profit: (c.revenue - c.cogs - c.totalShipping - c.totalFees - c.totalPromo).toFixed(2),
+        }));
+      })(),
+    },
   };
 
   const { headers, rows } = reportConfig[reportType];
@@ -1056,7 +1219,7 @@ function ReportsView({ items, sales, customers }) {
     win.document.write(`
       <html><head><title>${label} Report</title></head>
       <body style="font-family:sans-serif;padding:24px;">
-        <h2>${label} Report — The Pull Bar</h2>
+        <h2>${label} Report ‚Äî The Pull Bar</h2>
         <p style="color:#666;font-size:12px;">Generated ${new Date().toLocaleString()}</p>
         <table style="border-collapse:collapse;width:100%;font-size:13px;">
           <thead><tr>${headers.map(h => `<th style="text-align:left;padding:6px 10px;border-bottom:2px solid #333;">${h.label}</th>`).join('')}</tr></thead>
@@ -1128,10 +1291,10 @@ function OrdersView({ sales, onUpdate }) {
           {onlineOrders.map(s => (
             <div key={s.id} style={{ background: COLORS.espressoSoft, border: `1px solid ${COLORS.brown}`, borderRadius: 10, padding: '14px 16px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                <div style={{ fontFamily: 'Fraunces, serif', color: COLORS.cream, fontWeight: 700, fontSize: 14 }}>{s.customerName || 'Guest'} · ${s.total.toFixed(2)}</div>
+                <div style={{ fontFamily: 'Fraunces, serif', color: COLORS.cream, fontWeight: 700, fontSize: 14 }}>{s.customerName || 'Guest'} ¬∑ ${s.total.toFixed(2)}</div>
                 <div style={{ fontFamily: 'Jost, sans-serif', color: COLORS.creamDim, fontSize: 12 }}>{new Date(s.date).toLocaleDateString()}</div>
               </div>
-              <div style={{ fontFamily: 'Jost, sans-serif', color: COLORS.creamDim, fontSize: 12, marginBottom: 8 }}>{s.lines.map(l => `${l.name} ×${l.qty}`).join(', ')}</div>
+              <div style={{ fontFamily: 'Jost, sans-serif', color: COLORS.creamDim, fontSize: 12, marginBottom: 8 }}>{s.lines.map(l => `${l.name} √ó${l.qty}`).join(', ')}</div>
               {s.shippingAddress && <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: COLORS.brassBright, whiteSpace: 'pre-wrap', marginBottom: 10 }}>{s.shippingAddress}</div>}
               <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
                 <select style={{ ...inputStyle, padding: '6px 10px', fontSize: 12 }} value={s.fulfillmentStatus || 'unfulfilled'} onChange={e => onUpdate({ ...s, fulfillmentStatus: e.target.value })}>
@@ -1156,6 +1319,9 @@ export default function App() {
   const [sales, setSales] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [coupons, setCoupons] = useState([]);
+  const [platforms, setPlatforms] = useState(() => {
+    try { const p = localStorage.getItem(storageKeys.platforms); return p ? JSON.parse(p) : DEFAULT_PLATFORMS; } catch { return DEFAULT_PLATFORMS; }
+  });
   const [loaded, setLoaded] = useState(false);
   
   const COLORS = getColors(theme);
@@ -1182,15 +1348,26 @@ export default function App() {
   const handleAddCoupon = (c) => { const next = [...coupons, c]; setCoupons(next); saveKey(storageKeys.coupons, next); };
   const handleDeleteCoupon = (id) => { const next = coupons.filter(c => c.id !== id); setCoupons(next); saveKey(storageKeys.coupons, next); };
   const handleUpdateSale = (updated) => { const next = sales.map(s => s.id === updated.id ? updated : s); setSales(next); saveKey(storageKeys.sales, next); };
+  const handleAddPlatform = (platform) => { const next = [...platforms, platform]; setPlatforms(next); saveKey(storageKeys.platforms, next); };
+  const handleDeletePlatform = (id) => { const next = platforms.filter(p => p.id !== id); setPlatforms(next); saveKey(storageKeys.platforms, next); };
 
-  const handleCheckout = ({ cartLines, customer, couponCode, couponDiscount, pointsRedeemed, pointsDiscount, pointsEarned, total, isOnlineOrder, shippingAddress }) => {
+  const handleCheckout = ({ cartLines, customer, couponCode, couponDiscount, pointsRedeemed, pointsDiscount, pointsEarned, total, isOnlineOrder, shippingAddress, channel = 'instore', shippingCost = 0, shippingPaidBy = 'user', platformFees = 0, promotionCosts = 0 }) => {
     const receiptNumber = `REC-${String(sales.length + 1).padStart(4, '0')}`;
+    const costOfGoods = cartLines.reduce((sum, l) => sum + (l.item.cost * l.qty), 0);
+    const netProfit = total - costOfGoods - (shippingPaidBy === 'user' ? 0 : shippingCost) - platformFees - promotionCosts;
+    
     const sale = {
       id: uid(), receiptNumber, date: new Date().toISOString(), total, couponCode: couponCode || null,
       couponDiscount, pointsRedeemed, pointsDiscount, pointsEarned,
       customerId: customer?.id || null, customerName: customer?.name || null,
-      lines: cartLines.map(l => ({ name: l.item.name, qty: l.qty, price: l.item.price, sku: l.item.sku })),
-      channel: isOnlineOrder ? 'online' : 'in-store',
+      lines: cartLines.map(l => ({ name: l.item.name, qty: l.qty, price: l.item.price, sku: l.item.sku, cost: l.item.cost })),
+      channel, // ebay, whatnot, tcgplayer, tiktok, mercari, instore, etc.
+      shippingCost, // Amount paid for shipping
+      shippingPaidBy, // 'user' or 'me'
+      platformFees, // eBay fees, TCG Player fees, etc.
+      promotionCosts, // Ad spend, promotion costs
+      costOfGoods, // Total cost of items sold
+      netProfit, // Revenue - COGS - (user-paid shipping) - fees - promo
       shippingAddress: shippingAddress || '',
       fulfillmentStatus: isOnlineOrder ? 'unfulfilled' : null,
       trackingNumber: '',
@@ -1207,7 +1384,7 @@ export default function App() {
     setSales(nextSales); saveKey(storageKeys.sales, nextSales);
     setItems(nextItems); saveKey(storageKeys.items, nextItems);
     setCustomers(nextCustomers); saveKey(storageKeys.customers, nextCustomers);
-    alert(`Sale complete! ${receiptNumber}\nTotal: $${total.toFixed(2)}`);
+    alert(`Sale complete! ${receiptNumber}\nTotal: $${total.toFixed(2)}\nNet Profit: $${netProfit.toFixed(2)}`);
   };
 
   const tabs = [
@@ -1216,6 +1393,7 @@ export default function App() {
     { id: 'pos', label: 'POS', icon: ShoppingCart },
     { id: 'customers', label: 'Customers', icon: Users },
     { id: 'coupons', label: 'Coupons', icon: Tag },
+    { id: 'platforms', label: 'Platforms', icon: Globe },
     { id: 'reports', label: 'Reports', icon: FileText },
     { id: 'orders', label: 'Orders', icon: Truck },
   ];
@@ -1259,6 +1437,7 @@ export default function App() {
               {tab === 'pos' && <POSView items={items} customers={customers} coupons={coupons} onCheckout={handleCheckout} onAddCustomer={handleAddCustomer} />}
               {tab === 'customers' && <CustomersView customers={customers} sales={sales} onAdd={handleAddCustomer} onUpdate={handleUpdateCustomer} />}
               {tab === 'coupons' && <CouponsView coupons={coupons} onAdd={handleAddCoupon} onDelete={handleDeleteCoupon} />}
+              {tab === 'platforms' && <PlatformsView platforms={platforms} onAddPlatform={handleAddPlatform} onDeletePlatform={handleDeletePlatform} />}
               {tab === 'reports' && <ReportsView items={items} sales={sales} customers={customers} />}
               {tab === 'orders' && <OrdersView sales={sales} onUpdate={handleUpdateSale} />}
             </>
