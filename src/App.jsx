@@ -163,7 +163,7 @@ function downloadXLSX(filename, rows, headers, sheetName = 'Report') {
 
 function printReceipt(sale, storeInfo = {}) {
   const win = window.open('', '_blank');
-  const itemsHtml = sale.lines.map(l => `<tr><td style="padding:4px;border-bottom:1px solid #ddd;text-align:left;">${l.sku || 'N/A'}</td><td style="padding:4px;border-bottom:1px solid #ddd;">${l.name}</td><td style="padding:4px;border-bottom:1px solid #ddd;text-align:center;">×${l.qty}</td><td style="padding:4px;border-bottom:1px solid #ddd;text-align:right;">$${(l.price * l.qty).toFixed(2)}</td></tr>`).join('');
+  const itemsHtml = sale.lines.map(l => `<tr><td style="padding:4px;border-bottom:1px solid #ddd;text-align:left;">${l.sku || 'N/A'}</td><td style="padding:4px;border-bottom:1px solid #ddd;">${l.name}</td><td style="padding:4px;border-bottom:1px solid #ddd;text-align:center;">x${l.qty}</td><td style="padding:4px;border-bottom:1px solid #ddd;text-align:right;">$${(l.price * l.qty).toFixed(2)}</td></tr>`).join('');
   win.document.write(`<html><head><title>Receipt ${sale.receiptNumber}</title></head><body style="font-family:'Courier New',monospace;max-width:400px;margin:0 auto;padding:20px;"><div style="text-align:center;margin-bottom:20px;"><div style="font-size:18px;font-weight:bold;">THE PULL BAR</div><div style="font-size:11px;color:#666;">Receipt ${sale.receiptNumber}</div><div style="font-size:11px;color:#666;">${new Date(sale.date).toLocaleString()}</div></div><table style="width:100%;font-size:12px;"><thead><tr style="border-bottom:2px solid #000;"><th style="text-align:left;padding:4px;">SKU</th><th style="text-align:left;padding:4px;">Item</th><th style="text-align:center;padding:4px;">Qty</th><th style="text-align:right;padding:4px;">Total</th></tr></thead><tbody>${itemsHtml}</tbody></table><div style="margin-top:16px;font-size:13px;font-weight:bold;text-align:right;border-top:2px solid #000;padding-top:8px;">Total: $${sale.total.toFixed(2)}</div>${sale.couponCode ? `<div style="text-align:center;font-size:11px;margin-top:8px;color:#666;">Coupon: ${sale.couponCode} (-$${sale.couponDiscount.toFixed(2)})</div>` : ''}${sale.pointsRedeemed > 0 ? `<div style="text-align:center;font-size:11px;color:#666;">Points redeemed: ${sale.pointsRedeemed} (-$${sale.pointsDiscount.toFixed(2)})</div>` : ''}<div style="text-align:center;font-size:11px;margin-top:16px;color:#666;border-top:1px solid #ddd;padding-top:8px;">Thank you for your business!</div></body></html>`);
   win.document.close();
   win.focus();
@@ -172,7 +172,7 @@ function printReceipt(sale, storeInfo = {}) {
 
 function printPackingSlip(sale, storeInfo = {}) {
   const win = window.open('', '_blank');
-  const itemsHtml = sale.lines.map(l => `<tr><td style="padding:8px;border-bottom:1px solid #ddd;font-weight:bold;">${l.sku}</td><td style="padding:8px;border-bottom:1px solid #ddd;">${l.name}</td><td style="padding:8px;border-bottom:1px solid #ddd;text-align:center;">×${l.qty}</td></tr>`).join('');
+  const itemsHtml = sale.lines.map(l => `<tr><td style="padding:8px;border-bottom:1px solid #ddd;font-weight:bold;">${l.sku}</td><td style="padding:8px;border-bottom:1px solid #ddd;">${l.name}</td><td style="padding:8px;border-bottom:1px solid #ddd;text-align:center;">x${l.qty}</td></tr>`).join('');
   win.document.write(`<html><head><title>Packing Slip ${sale.receiptNumber}</title></head><body style="font-family:Arial,sans-serif;max-width:800px;margin:0 auto;padding:40px;line-height:1.6;"><div style="display:flex;justify-content:space-between;margin-bottom:30px;"><div><div style="font-size:20px;font-weight:bold;">THE PULL BAR</div><div style="font-size:12px;color:#666;">${storeInfo.address || 'Store Address'}</div><div style="font-size:12px;color:#666;">${storeInfo.phone || 'Phone'}</div></div><div style="text-align:right;"><div style="font-size:14px;font-weight:bold;">PACKING SLIP</div><div style="font-size:12px;">Receipt #: ${sale.receiptNumber}</div><div style="font-size:12px;">Date: ${new Date(sale.date).toLocaleDateString()}</div></div></div><div style="margin-bottom:30px;padding:15px;background:#f5f5f5;border-radius:5px;"><div style="font-weight:bold;margin-bottom:8px;">SHIP TO:</div><div style="font-size:14px;white-space:pre-wrap;">${sale.shippingAddress}</div></div><table style="width:100%;margin-bottom:30px;font-size:13px;"><thead><tr style="border-bottom:2px solid #000;"><th style="text-align:left;padding:8px;">SKU</th><th style="text-align:left;padding:8px;">Item Description</th><th style="text-align:center;padding:8px;">Quantity</th></tr></thead><tbody>${itemsHtml}</tbody></table><div style="border-top:1px solid #ddd;padding-top:20px;font-size:11px;color:#666;line-height:1.8;"><strong>Return Policy:</strong> Items may be returned within 7 days of receipt in original condition for full refund. Clearance and final-sale items are non-returnable.</div></body></html>`);
   win.document.close();
   win.focus();
@@ -379,7 +379,7 @@ function AddItemModal({ onClose, onSave, existingItems = [] }) {
                       {variantQuery && <div style={{ padding: '8px 12px', fontFamily: 'Jost, sans-serif', fontSize: 10, color: COLORS.creamDim, fontWeight: 600, textTransform: 'uppercase' }}>Matching:</div>}
                       {filteredVariants.map(v => (
                         <div key={v.code} onClick={() => { setVariant(v.code); setVariantQuery(v.label); setShowVariantDropdown(false); }} style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: `1px solid ${COLORS.brown}`, color: COLORS.cream, fontSize: 13, fontFamily: 'Jost, sans-serif', background: variant === v.code ? COLORS.brown : 'transparent' }}>
-                          <span style={{ fontWeight: 600, color: COLORS.brass }}>{v.code}</span> — {v.label}
+                          <span style={{ fontWeight: 600, color: COLORS.brass }}>{v.code}</span>  -  {v.label}
                         </div>
                       ))}
                     </>
@@ -393,7 +393,7 @@ function AddItemModal({ onClose, onSave, existingItems = [] }) {
                       <div style={{ padding: '8px 12px', fontFamily: 'Jost, sans-serif', fontSize: 10, color: COLORS.creamDim, fontWeight: 600, textTransform: 'uppercase', background: COLORS.paper }}>All variants:</div>
                       {VARIANTS.map(v => (
                         <div key={v.code} onClick={() => { setVariant(v.code); setVariantQuery(v.label); setShowVariantDropdown(false); }} style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: `1px solid ${COLORS.brown}`, color: COLORS.cream, fontSize: 12, fontFamily: 'Jost, sans-serif', background: variant === v.code ? COLORS.brown : 'transparent' }}>
-                          <span style={{ fontWeight: 600, color: COLORS.brass }}>{v.code}</span> — {v.label}
+                          <span style={{ fontWeight: 600, color: COLORS.brass }}>{v.code}</span>  -  {v.label}
                         </div>
                       ))}
                     </>
@@ -403,7 +403,7 @@ function AddItemModal({ onClose, onSave, existingItems = [] }) {
             </div>
           </Field>
 
-          <Field label="Condition"><select style={inputStyle} value={condition} onChange={e => setCondition(e.target.value)}>{CONDITIONS.map(c => <option key={c} value={c}>{c} — {CONDITION_LABELS[c]}</option>)}</select></Field>
+          <Field label="Condition"><select style={inputStyle} value={condition} onChange={e => setCondition(e.target.value)}>{CONDITIONS.map(c => <option key={c} value={c}>{c}  -  {CONDITION_LABELS[c]}</option>)}</select></Field>
         </>
       )}
       <Field label="Cost $"><input style={inputStyle} type="number" value={cost} onChange={e => setCost(e.target.value)} placeholder="0.00" /></Field>
@@ -411,7 +411,7 @@ function AddItemModal({ onClose, onSave, existingItems = [] }) {
       <Field label="Quantity"><input style={inputStyle} type="number" value={qty} onChange={e => setQty(e.target.value)} placeholder="1" /></Field>
       <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'Jost, sans-serif', fontSize: 13, color: COLORS.cream, marginBottom: 12 }}>
         <input type="checkbox" checked={hold} onChange={e => setHold(e.target.checked)} />
-        Hold — collectible, never mark down automatically
+        Hold  -  collectible, never mark down automatically
       </label>
       {!hold && (
         <div style={{ marginBottom: 16 }}>
@@ -554,7 +554,7 @@ function CameraScanModal({ onDetect, onClose }) {
       <div ref={videoTargetRef} style={{ width: '100%', height: 300, background: COLORS.paper, borderRadius: 8, marginBottom: 16 }} />
       {status === 'loading' && <div style={{ textAlign: 'center', color: COLORS.creamDim, fontFamily: 'Jost, sans-serif' }}>Starting camera...</div>}
       {status === 'error' && <div style={{ textAlign: 'center', color: COLORS.oxblood, fontFamily: 'Jost, sans-serif' }}>{errorMsg}</div>}
-      {status === 'scanning' && <div style={{ textAlign: 'center', color: COLORS.creamDim, fontFamily: 'Jost, sans-serif', fontSize: 12 }}>Point camera at barcode — it will add automatically.</div>}
+      {status === 'scanning' && <div style={{ textAlign: 'center', color: COLORS.creamDim, fontFamily: 'Jost, sans-serif', fontSize: 12 }}>Point camera at barcode  -  it will add automatically.</div>}
       {lastScanned && <div style={{ textAlign: 'center', color: COLORS.brass, fontFamily: 'JetBrains Mono, monospace', fontSize: 12, marginTop: 10 }}>Last: {lastScanned}</div>}
       <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
         <Button onClick={onClose} style={{ flex: 1, justifyContent: 'center' }}>Done</Button>
@@ -589,7 +589,7 @@ function InventoryView({ items, onAdd, onDelete }) {
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ color: COLORS.brass, fontFamily: 'Fraunces, serif', fontSize: 16, fontWeight: 700 }}>${item.price.toFixed(2)}</div>
-                <div style={{ color: COLORS.creamDim, fontFamily: 'Jost, sans-serif', fontSize: 11 }}>cost ${item.cost.toFixed(2)} · qty {item.qty}</div>
+                <div style={{ color: COLORS.creamDim, fontFamily: 'Jost, sans-serif', fontSize: 11 }}>cost ${item.cost.toFixed(2)} - qty {item.qty}</div>
               </div>
               <button onClick={() => onDelete(item.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: COLORS.oxblood }}><Trash2 size={16} /></button>
             </div>
@@ -643,25 +643,25 @@ function Dashboard({ items, sales, customers, onApplyMarkdown }) {
             <tbody>
               {detail === 'value' && items.slice().sort((a, b) => (b.price * b.qty) - (a.price * a.qty)).map(i => (
                 <tr key={i.id} style={{ borderBottom: `1px solid ${COLORS.brown}` }}>
-                  <td style={{ padding: '10px 14px', color: COLORS.cream }}>{i.name} · qty {i.qty}</td>
+                  <td style={{ padding: '10px 14px', color: COLORS.cream }}>{i.name} - qty {i.qty}</td>
                   <td style={{ padding: '10px 14px', textAlign: 'right', color: COLORS.brass, fontWeight: 600 }}>${(i.price * i.qty).toFixed(2)}</td>
                 </tr>
               ))}
               {detail === 'cost' && items.slice().sort((a, b) => (b.cost * b.qty) - (a.cost * a.qty)).map(i => (
                 <tr key={i.id} style={{ borderBottom: `1px solid ${COLORS.brown}` }}>
-                  <td style={{ padding: '10px 14px', color: COLORS.cream }}>{i.name} · qty {i.qty}</td>
+                  <td style={{ padding: '10px 14px', color: COLORS.cream }}>{i.name} - qty {i.qty}</td>
                   <td style={{ padding: '10px 14px', textAlign: 'right', color: COLORS.brass, fontWeight: 600 }}>${(i.cost * i.qty).toFixed(2)}</td>
                 </tr>
               ))}
               {detail === 'revenue' && sales.slice().reverse().map(s => (
                 <tr key={s.id} style={{ borderBottom: `1px solid ${COLORS.brown}` }}>
-                  <td style={{ padding: '10px 14px', color: COLORS.cream }}>{new Date(s.date).toLocaleDateString()} · {s.lines.map(l => `${l.name} ×${l.qty}`).join(', ')}{s.customerName ? ` · ${s.customerName}` : ''}</td>
+                  <td style={{ padding: '10px 14px', color: COLORS.cream }}>{new Date(s.date).toLocaleDateString()} - {s.lines.map(l => `${l.name} x${l.qty}`).join(', ')}{s.customerName ? ` - ${s.customerName}` : ''}</td>
                   <td style={{ padding: '10px 14px', textAlign: 'right', color: COLORS.brass, fontWeight: 600 }}>${s.total.toFixed(2)}</td>
                 </tr>
               ))}
               {detail === 'customers' && customers.map(c => (
                 <tr key={c.id} style={{ borderBottom: `1px solid ${COLORS.brown}` }}>
-                  <td style={{ padding: '10px 14px', color: COLORS.cream }}>{c.name} · {[c.phone, c.email].filter(Boolean).join(' · ')}</td>
+                  <td style={{ padding: '10px 14px', color: COLORS.cream }}>{c.name} - {[c.phone, c.email].filter(Boolean).join(' - ')}</td>
                   <td style={{ padding: '10px 14px', textAlign: 'right', color: COLORS.brass, fontWeight: 600 }}>{c.points} pts</td>
                 </tr>
               ))}
@@ -696,7 +696,7 @@ function Dashboard({ items, sales, customers, onApplyMarkdown }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {topSellers.map((t, idx) => (
             <div key={t.name} style={{ display: 'flex', justifyContent: 'space-between', background: COLORS.espressoSoft, border: `1px solid ${COLORS.brown}`, borderRadius: 8, padding: '10px 14px', fontFamily: 'Jost, sans-serif', fontSize: 13 }}>
-              <span style={{ color: COLORS.cream }}><span style={{ color: COLORS.brass, fontFamily: 'JetBrains Mono, monospace', marginRight: 8 }}>#{idx + 1}</span>{t.name} · {t.qty} sold</span>
+              <span style={{ color: COLORS.cream }}><span style={{ color: COLORS.brass, fontFamily: 'JetBrains Mono, monospace', marginRight: 8 }}>#{idx + 1}</span>{t.name} - {t.qty} sold</span>
               <span style={{ color: COLORS.brass, fontWeight: 600 }}>${t.revenue.toFixed(2)}</span>
             </div>
           ))}
@@ -710,7 +710,7 @@ function Dashboard({ items, sales, customers, onApplyMarkdown }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {sales.slice().reverse().slice(0, 8).map(s => (
             <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', background: COLORS.espressoSoft, border: `1px solid ${COLORS.brown}`, borderRadius: 8, padding: '10px 14px', fontFamily: 'Jost, sans-serif', fontSize: 13 }}>
-              <span style={{ color: COLORS.cream }}>{s.receiptNumber} · {s.lines.map(l => `${l.name} ×${l.qty}`).join(', ')}{s.customerName ? ` · ${s.customerName}` : ''}</span>
+              <span style={{ color: COLORS.cream }}>{s.receiptNumber} - {s.lines.map(l => `${l.name} x${l.qty}`).join(', ')}{s.customerName ? ` - ${s.customerName}` : ''}</span>
               <span style={{ color: COLORS.brass, fontWeight: 600 }}>${s.total.toFixed(2)}</span>
             </div>
           ))}
@@ -759,7 +759,7 @@ function CustomersView({ customers, sales, onAdd, onUpdate }) {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <div style={{ color: COLORS.cream, fontFamily: 'Jost, sans-serif', fontWeight: 600, fontSize: 14 }}>{c.name}</div>
-                    <div style={{ color: COLORS.creamDim, fontFamily: 'Jost, sans-serif', fontSize: 12 }}>{[c.phone, c.email].filter(Boolean).join(' · ')}</div>
+                    <div style={{ color: COLORS.creamDim, fontFamily: 'Jost, sans-serif', fontSize: 12 }}>{[c.phone, c.email].filter(Boolean).join(' - ')}</div>
                   </div>
                   <div style={{ color: COLORS.brass, fontFamily: 'Fraunces, serif', fontWeight: 700, fontSize: 16 }}>{c.points} pts</div>
                 </div>
@@ -773,7 +773,7 @@ function CustomersView({ customers, sales, onAdd, onUpdate }) {
                     <div style={{ marginBottom: 12 }}>
                       {customerSales.slice().reverse().map(s => (
                         <div key={s.id} style={{ padding: '6px 0', borderBottom: `1px solid ${COLORS.brown}`, color: COLORS.creamDim, fontFamily: 'Jost, sans-serif', fontSize: 12 }}>
-                          {s.lines.map(l => `${l.name} ×${l.qty}`).join(', ')} — ${s.total.toFixed(2)}
+                          {s.lines.map(l => `${l.name} x${l.qty}`).join(', ')}  -  ${s.total.toFixed(2)}
                         </div>
                       ))}
                     </div>
@@ -813,7 +813,7 @@ function CouponsView({ coupons, onAdd, onDelete }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {coupons.map(c => (
             <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: COLORS.espressoSoft, border: `1px solid ${COLORS.brown}`, borderRadius: 10, padding: '12px 16px' }}>
-              <div style={{ color: COLORS.cream, fontFamily: 'Jost, sans-serif', fontWeight: 600 }}>{c.code} · {c.type === 'percent' ? `${c.value}% off` : `$${c.value.toFixed(2)} off`}</div>
+              <div style={{ color: COLORS.cream, fontFamily: 'Jost, sans-serif', fontWeight: 600 }}>{c.code} - {c.type === 'percent' ? `${c.value}% off` : `$${c.value.toFixed(2)} off`}</div>
               <button onClick={() => onDelete(c.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: COLORS.oxblood }}><Trash2 size={16} /></button>
             </div>
           ))}
@@ -922,7 +922,7 @@ function POSView({ items, customers, coupons, platforms, onCheckout, onAddCustom
         <div style={{ fontFamily: 'Fraunces, serif', color: COLORS.cream, fontWeight: 700, marginBottom: 10, fontSize: 15 }}>Customer (optional)</div>
         {selectedCustomer ? (
           <div style={{ background: COLORS.espressoSoft, border: `1px solid ${COLORS.brass}`, borderRadius: 10, padding: '10px 12px', marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ color: COLORS.cream, fontFamily: 'Jost, sans-serif', fontWeight: 600 }}>{selectedCustomer.name} · {selectedCustomer.points} pts</span>
+            <span style={{ color: COLORS.cream, fontFamily: 'Jost, sans-serif', fontWeight: 600 }}>{selectedCustomer.name} - {selectedCustomer.points} pts</span>
             <button onClick={() => setSelectedCustomer(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: COLORS.creamDim }}><X size={16} /></button>
           </div>
         ) : (
@@ -1301,7 +1301,7 @@ function ReportsView({ items, sales, customers }) {
     win.document.write(`
       <html><head><title>${label} Report</title></head>
       <body style="font-family:sans-serif;padding:24px;">
-        <h2>${label} Report — The Pull Bar</h2>
+        <h2>${label} Report  -  The Pull Bar</h2>
         <p style="color:#666;font-size:12px;">Generated ${new Date().toLocaleString()}</p>
         <table style="border-collapse:collapse;width:100%;font-size:13px;">
           <thead><tr>${headers.map(h => `<th style="text-align:left;padding:6px 10px;border-bottom:2px solid #333;">${h.label}</th>`).join('')}</tr></thead>
@@ -1373,10 +1373,10 @@ function OrdersView({ sales, onUpdate }) {
           {onlineOrders.map(s => (
             <div key={s.id} style={{ background: COLORS.espressoSoft, border: `1px solid ${COLORS.brown}`, borderRadius: 10, padding: '14px 16px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                <div style={{ fontFamily: 'Fraunces, serif', color: COLORS.cream, fontWeight: 700, fontSize: 14 }}>{s.customerName || 'Guest'} · ${s.total.toFixed(2)}</div>
+                <div style={{ fontFamily: 'Fraunces, serif', color: COLORS.cream, fontWeight: 700, fontSize: 14 }}>{s.customerName || 'Guest'} - ${s.total.toFixed(2)}</div>
                 <div style={{ fontFamily: 'Jost, sans-serif', color: COLORS.creamDim, fontSize: 12 }}>{new Date(s.date).toLocaleDateString()}</div>
               </div>
-              <div style={{ fontFamily: 'Jost, sans-serif', color: COLORS.creamDim, fontSize: 12, marginBottom: 8 }}>{s.lines.map(l => `${l.name} ×${l.qty}`).join(', ')}</div>
+              <div style={{ fontFamily: 'Jost, sans-serif', color: COLORS.creamDim, fontSize: 12, marginBottom: 8 }}>{s.lines.map(l => `${l.name} x${l.qty}`).join(', ')}</div>
               {s.shippingAddress && <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: COLORS.brassBright, whiteSpace: 'pre-wrap', marginBottom: 10 }}>{s.shippingAddress}</div>}
               <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
                 <select style={{ ...inputStyle, padding: '6px 10px', fontSize: 12 }} value={s.fulfillmentStatus || 'unfulfilled'} onChange={e => onUpdate({ ...s, fulfillmentStatus: e.target.value })}>
