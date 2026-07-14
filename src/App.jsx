@@ -2,18 +2,46 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { LayoutGrid, ShoppingCart, BarChart3, Plus, Search, Trash2, X, Package, TrendingUp, AlertTriangle, Minus, Check, Users, Tag, Star, Camera, FileText, Truck, Download } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
-// ---------- Design tokens: warm luxury (cream / brass / espresso) ----------
-const COLORS = {
-  paper: '#F6EFE1',
-  espresso: '#2E2117',
-  espressoSoft: '#FFFFFF',
-  brown: '#DACB9F',
-  brass: '#A8783D',
-  brassBright: '#8F6B34',
-  cream: '#2E2117',
-  creamDim: '#8A7A63',
-  oxblood: '#8B4038',
+// ---------- Theme system: Light / Dark / High Contrast ----------
+const THEMES = {
+  light: {
+    paper: '#FFFFFF',
+    espresso: '#2E2117',
+    espressoSoft: '#F8F8F8',
+    brown: '#E0D5C7',
+    brass: '#B58A4A',
+    brassBright: '#D4A574',
+    cream: '#2E2117',
+    creamDim: '#8A7A63',
+    oxblood: '#8B4038',
+  },
+  dark: {
+    paper: '#1A1A1A',
+    espresso: '#F1E9D8',
+    espressoSoft: '#2E2E2E',
+    brown: '#4A4440',
+    brass: '#D4A574',
+    brassBright: '#E8C68E',
+    cream: '#F1E9D8',
+    creamDim: '#B3A89F',
+    oxblood: '#C9685F',
+  },
+  highContrast: {
+    paper: '#000000',
+    espresso: '#FFFFFF',
+    espressoSoft: '#1A1A1A',
+    brown: '#FFFFFF',
+    brass: '#FFD700',
+    brassBright: '#FFFF00',
+    cream: '#FFFFFF',
+    creamDim: '#CCCCCC',
+    oxblood: '#FF6B6B',
+  },
 };
+
+function getColors(theme = 'light') {
+  return THEMES[theme] || THEMES.light;
+}
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 
@@ -34,7 +62,26 @@ const QUAGGA_SRC = 'https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.
 const CONDITIONS = ['NM', 'LP', 'MP', 'HP', 'DMG'];
 const CONDITION_LABELS = { NM: 'Near Mint', LP: 'Lightly Played', MP: 'Moderately Played', HP: 'Heavily Played', DMG: 'Damaged' };
 const LANGUAGES = [{ code: '', label: 'English' }, { code: 'JP', label: 'Japanese' }, { code: 'CN', label: 'Chinese' }];
-const VARIANTS = [{ code: '', label: 'Normal' }, { code: 'H', label: 'Holo' }, { code: 'RH', label: 'Reverse Holo' }, { code: 'FA', label: 'Full Art' }, { code: 'IR', label: 'Illustration Rare' }, { code: 'SIR', label: 'Special Illustration Rare' }, { code: 'UR', label: 'Ultra Rare' }, { code: 'HR', label: 'Hyper Rare' }, { code: 'SEC', label: 'Secret Rare' }];
+const VARIANTS = [
+  { code: 'CC', label: 'Common/Normal' },
+  { code: 'H', label: 'Holo' },
+  { code: 'RH', label: 'Reverse Holo' },
+  { code: 'FA', label: 'Full Art' },
+  { code: 'IR', label: 'Illustration Rare' },
+  { code: 'SIR', label: 'Special Illustration Rare' },
+  { code: 'UR', label: 'Ultra Rare' },
+  { code: 'HR', label: 'Hyper Rare' },
+  { code: 'SEC', label: 'Secret Rare' },
+  { code: 'EX', label: 'EX' },
+  { code: 'GX', label: 'GX' },
+  { code: 'V', label: 'V' },
+  { code: 'VMAX', label: 'V-MAX' },
+  { code: 'VSTAR', label: 'V-Star' },
+  { code: 'AS', label: 'Special Art' },
+  { code: 'AR', label: 'Alternate Rare' },
+  { code: 'RAD', label: 'Radiant Rare' },
+  { code: 'TG', label: 'Tag Team GX' },
+];
 
 function genSku({ type, game, set, number, variant, condition, language }) {
   if (type === 'accessory') {
@@ -44,8 +91,13 @@ function genSku({ type, game, set, number, variant, condition, language }) {
   if (language) parts.push(language);
   parts.push((game || 'PKM').toUpperCase());
   if (set) parts.push(set.replace(/[^A-Za-z0-9]/g, '').slice(0, 3).toUpperCase());
-  if (number) parts.push(number.replace(/[^A-Za-z0-9]/g, ''));
-  if (variant) parts.push(variant);
+  if (number) {
+    const numStr = number.replace(/[^0-9]/g, '');
+    const padded = numStr.padStart(3, '0');
+    parts.push(padded);
+  }
+  const variantToUse = variant || 'CC';
+  parts.push(variantToUse);
   if (condition && condition !== 'NM') parts.push(condition);
   return parts.join('-');
 }
@@ -93,6 +145,102 @@ function downloadXLSX(filename, rows, headers, sheetName = 'Report') {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, sheetName);
   XLSX.writeFile(wb, filename);
+}
+
+// ---------- Receipt & Packing Slip Generators ----------
+function printReceipt(sale, COLORS, storeInfo = {}) {
+  const win = window.open('', '_blank');
+  const itemsHtml = sale.lines.map(l => `
+    <tr>
+      <td style="padding: 4px; border-bottom: 1px solid #ddd; text-align: left;">${l.sku || 'N/A'}</td>
+      <td style="padding: 4px; border-bottom: 1px solid #ddd;">${l.name}</td>
+      <td style="padding: 4px; border-bottom: 1px solid #ddd; text-align: center;">×${l.qty}</td>
+      <td style="padding: 4px; border-bottom: 1px solid #ddd; text-align: right;">$${(l.price * l.qty).toFixed(2)}</td>
+    </tr>
+  `).join('');
+  
+  win.document.write(`
+    <html><head><title>Receipt ${sale.receiptNumber}</title></head>
+    <body style="font-family: 'Courier New', monospace; max-width: 400px; margin: 0 auto; padding: 20px;">
+      <div style="text-align: center; margin-bottom: 20px;">
+        <div style="font-size: 18px; font-weight: bold;">THE PULL BAR</div>
+        <div style="font-size: 11px; color: #666;">Receipt ${sale.receiptNumber}</div>
+        <div style="font-size: 11px; color: #666;">${new Date(sale.date).toLocaleString()}</div>
+      </div>
+      <table style="width: 100%; font-size: 12px;">
+        <thead>
+          <tr style="border-bottom: 2px solid #000;">
+            <th style="text-align: left; padding: 4px;">SKU</th>
+            <th style="text-align: left; padding: 4px;">Item</th>
+            <th style="text-align: center; padding: 4px;">Qty</th>
+            <th style="text-align: right; padding: 4px;">Total</th>
+          </tr>
+        </thead>
+        <tbody>${itemsHtml}</tbody>
+      </table>
+      <div style="margin-top: 16px; font-size: 13px; font-weight: bold; text-align: right; border-top: 2px solid #000; padding-top: 8px;">
+        Total: $${sale.total.toFixed(2)}
+      </div>
+      ${sale.couponCode ? `<div style="text-align: center; font-size: 11px; margin-top: 8px; color: #666;">Coupon: ${sale.couponCode} (-$${sale.couponDiscount.toFixed(2)})</div>` : ''}
+      ${sale.pointsRedeemed > 0 ? `<div style="text-align: center; font-size: 11px; color: #666;">Points redeemed: ${sale.pointsRedeemed} (-$${sale.pointsDiscount.toFixed(2)})</div>` : ''}
+      <div style="text-align: center; font-size: 11px; margin-top: 16px; color: #666; border-top: 1px solid #ddd; padding-top: 8px;">Thank you for your business!</div>
+    </body></html>
+  `);
+  win.document.close();
+  win.focus();
+  setTimeout(() => win.print(), 300);
+}
+
+function printPackingSlip(sale, COLORS, storeInfo = {}) {
+  const win = window.open('', '_blank');
+  const itemsHtml = sale.lines.map(l => `
+    <tr>
+      <td style="padding: 8px; border-bottom: 1px solid #ddd; font-weight: bold;">${l.sku}</td>
+      <td style="padding: 8px; border-bottom: 1px solid #ddd;">${l.name}</td>
+      <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: center;">×${l.qty}</td>
+    </tr>
+  `).join('');
+  
+  win.document.write(`
+    <html><head><title>Packing Slip ${sale.receiptNumber}</title></head>
+    <body style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 40px; line-height: 1.6;">
+      <div style="display: flex; justify-content: space-between; margin-bottom: 30px;">
+        <div>
+          <div style="font-size: 20px; font-weight: bold;">THE PULL BAR</div>
+          <div style="font-size: 12px; color: #666;">${storeInfo.address || 'Store Address'}</div>
+          <div style="font-size: 12px; color: #666;">${storeInfo.phone || 'Phone'}</div>
+        </div>
+        <div style="text-align: right;">
+          <div style="font-size: 14px; font-weight: bold;">PACKING SLIP</div>
+          <div style="font-size: 12px;">Receipt #: ${sale.receiptNumber}</div>
+          <div style="font-size: 12px;">Date: ${new Date(sale.date).toLocaleDateString()}</div>
+        </div>
+      </div>
+      
+      <div style="margin-bottom: 30px; padding: 15px; background: #f5f5f5; border-radius: 5px;">
+        <div style="font-weight: bold; margin-bottom: 8px;">SHIP TO:</div>
+        <div style="font-size: 14px; white-space: pre-wrap;">${sale.shippingAddress}</div>
+      </div>
+      
+      <table style="width: 100%; margin-bottom: 30px; font-size: 13px;">
+        <thead>
+          <tr style="border-bottom: 2px solid #000;">
+            <th style="text-align: left; padding: 8px;">SKU</th>
+            <th style="text-align: left; padding: 8px;">Item Description</th>
+            <th style="text-align: center; padding: 8px;">Quantity</th>
+          </tr>
+        </thead>
+        <tbody>${itemsHtml}</tbody>
+      </table>
+      
+      <div style="border-top: 1px solid #ddd; padding-top: 20px; font-size: 11px; color: #666; line-height: 1.8;">
+        <strong>Return Policy:</strong> Items may be returned within 7 days of receipt in original condition for full refund. Clearance and final-sale items are non-returnable.
+      </div>
+    </body></html>
+  `);
+  win.document.close();
+  win.focus();
+  setTimeout(() => win.print(), 300);
 }
 
 // ---------- Small UI atoms ----------
@@ -149,6 +297,12 @@ function AddItemModal({ onClose, onSave }) {
   const [set, setSet] = useState('');
   const [number, setNumber] = useState('');
   const [variant, setVariant] = useState('');
+  const [variantQuery, setVariantQuery] = useState('');
+  const [showVariantDropdown, setShowVariantDropdown] = useState(false);
+  const filteredVariants = VARIANTS.filter(v => 
+    v.code.toLowerCase().includes(variantQuery.toLowerCase()) || 
+    v.label.toLowerCase().includes(variantQuery.toLowerCase())
+  );
   const [condition, setCondition] = useState('NM');
   const [cost, setCost] = useState('');
   const [price, setPrice] = useState('');
@@ -210,9 +364,34 @@ function AddItemModal({ onClose, onSave }) {
               <Field label="Card #"><input style={inputStyle} value={number} onChange={e => setNumber(e.target.value)} placeholder="054" /></Field>
             </div>
             <Field label="Variant / rarity">
-              <select style={inputStyle} value={variant} onChange={e => setVariant(e.target.value)}>
-                {VARIANTS.map(v => <option key={v.code} value={v.code}>{v.label}</option>)}
-              </select>
+              <div style={{ position: 'relative' }}>
+                <input
+                  style={inputStyle}
+                  type="text"
+                  placeholder="Search variants or type custom..."
+                  value={variantQuery}
+                  onChange={e => { setVariantQuery(e.target.value); setShowVariantDropdown(true); }}
+                  onFocus={() => setShowVariantDropdown(true)}
+                  onBlur={() => setTimeout(() => setShowVariantDropdown(false), 200)}
+                />
+                {showVariantDropdown && variantQuery && (
+                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: COLORS.espressoSoft, border: `1px solid ${COLORS.brown}`, borderTop: 'none', borderRadius: '0 0 8px 8px', zIndex: 1000, maxHeight: 200, overflowY: 'auto' }}>
+                    {filteredVariants.length > 0 ? (
+                      filteredVariants.map(v => (
+                        <div
+                          key={v.code}
+                          onClick={() => { setVariant(v.code); setVariantQuery(v.label); setShowVariantDropdown(false); }}
+                          style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: `1px solid ${COLORS.brown}`, color: COLORS.cream, fontSize: 13, fontFamily: 'Jost, sans-serif' }}
+                        >
+                          <span style={{ fontWeight: 600, color: COLORS.brass }}>{v.code}</span> — {v.label}
+                        </div>
+                      ))
+                    ) : (
+                      <div style={{ padding: '8px 12px', color: COLORS.creamDim, fontFamily: 'Jost, sans-serif', fontSize: 12 }}>No matches. Type to create custom variant.</div>
+                    )}
+                  </div>
+                )}
+              </div>
             </Field>
             <Field label="Condition (defaults to NM)">
               <select style={inputStyle} value={condition} onChange={e => setCondition(e.target.value)}>
@@ -1105,11 +1284,20 @@ function OrdersView({ sales, onUpdate }) {
 // ---------- App ----------
 export default function App() {
   const [tab, setTab] = useState('dashboard');
+  const [theme, setTheme] = useState(() => {
+    try { return localStorage.getItem('pullbar-theme') || 'light'; } catch { return 'light'; }
+  });
   const [items, setItems] = useState([]);
   const [sales, setSales] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [coupons, setCoupons] = useState([]);
   const [loaded, setLoaded] = useState(false);
+  
+  const COLORS = getColors(theme);
+  const handleThemeChange = (newTheme) => {
+    setTheme(newTheme);
+    try { localStorage.setItem('pullbar-theme', newTheme); } catch {}
+  };
 
   useEffect(() => {
     (async () => {
@@ -1131,11 +1319,12 @@ export default function App() {
   const handleUpdateSale = (updated) => { const next = sales.map(s => s.id === updated.id ? updated : s); setSales(next); saveKey(storageKeys.sales, next); };
 
   const handleCheckout = ({ cartLines, customer, couponCode, couponDiscount, pointsRedeemed, pointsDiscount, pointsEarned, total, isOnlineOrder, shippingAddress }) => {
+    const receiptNumber = `REC-${String(sales.length + 1).padStart(4, '0')}`;
     const sale = {
-      id: uid(), date: new Date().toISOString(), total, couponCode: couponCode || null,
+      id: uid(), receiptNumber, date: new Date().toISOString(), total, couponCode: couponCode || null,
       couponDiscount, pointsRedeemed, pointsDiscount, pointsEarned,
       customerId: customer?.id || null, customerName: customer?.name || null,
-      lines: cartLines.map(l => ({ name: l.item.name, qty: l.qty, price: l.item.price })),
+      lines: cartLines.map(l => ({ name: l.item.name, qty: l.qty, price: l.item.price, sku: l.item.sku })),
       channel: isOnlineOrder ? 'online' : 'in-store',
       shippingAddress: shippingAddress || '',
       fulfillmentStatus: isOnlineOrder ? 'unfulfilled' : null,
@@ -1177,14 +1366,25 @@ export default function App() {
           <div>
             <div style={{ fontFamily: 'Fraunces, serif', color: COLORS.cream, fontSize: 22, fontWeight: 700, letterSpacing: 1 }}>THE PULL <span style={{ color: COLORS.brass }}>BAR</span></div>
           </div>
-          <div style={{ display: 'flex', gap: 6, background: COLORS.espressoSoft, padding: 5, borderRadius: 10, border: `1px solid ${COLORS.brown}`, flexWrap: 'wrap' }}>
-            {tabs.map(t => (
-              <button key={t.id} onClick={() => setTab(t.id)} style={{
-                display: 'flex', alignItems: 'center', gap: 6, border: 'none', cursor: 'pointer',
-                padding: '8px 14px', borderRadius: 7, fontFamily: 'Jost, sans-serif', fontWeight: 600, fontSize: 13,
-                background: tab === t.id ? COLORS.brass : 'transparent', color: tab === t.id ? COLORS.espresso : COLORS.creamDim,
-              }}><t.icon size={14} /> {t.label}</button>
-            ))}
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 4, background: COLORS.espressoSoft, padding: 4, borderRadius: 8, border: `1px solid ${COLORS.brown}` }}>
+              {['light', 'dark', 'highContrast'].map(t => (
+                <button key={t} onClick={() => handleThemeChange(t)} style={{
+                  padding: '6px 10px', borderRadius: 6, border: 'none', cursor: 'pointer',
+                  background: theme === t ? COLORS.brass : 'transparent', color: theme === t ? COLORS.espresso : COLORS.creamDim,
+                  fontFamily: 'Jost, sans-serif', fontSize: 11, fontWeight: 600, textTransform: 'capitalize'
+                }}>{t === 'highContrast' ? 'HC' : t.slice(0, 1).toUpperCase() + t.slice(1)}</button>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: 6, background: COLORS.espressoSoft, padding: 5, borderRadius: 10, border: `1px solid ${COLORS.brown}`, flexWrap: 'wrap' }}>
+              {tabs.map(t => (
+                <button key={t.id} onClick={() => setTab(t.id)} style={{
+                  display: 'flex', alignItems: 'center', gap: 6, border: 'none', cursor: 'pointer',
+                  padding: '8px 14px', borderRadius: 7, fontFamily: 'Jost, sans-serif', fontWeight: 600, fontSize: 13,
+                  background: tab === t.id ? COLORS.brass : 'transparent', color: tab === t.id ? COLORS.espresso : COLORS.creamDim,
+                }}><t.icon size={14} /> {t.label}</button>
+              ))}
+            </div>
           </div>
         </div>
 
